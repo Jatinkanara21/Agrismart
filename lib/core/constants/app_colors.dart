@@ -8,6 +8,7 @@ abstract final class AppColors {
   static const accent = Color(0xFFFFB300);
   static const background = Color(0xFFF5F7F3);
   static const surface = Colors.white;
+  static const mint = Color(0xFFE8F5E9);
   static const beige = Color(0xFFF3EBDD);
   static const error = Color(0xFFD32F2F);
   static const warning = Color(0xFFF9A825);
