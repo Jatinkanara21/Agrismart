@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
@@ -69,7 +70,7 @@ class _DiseaseDetectionScreenState extends State<DiseaseDetectionScreen> {
                   FutureBuilder<List<int>>(
                     future: _image!.readAsBytes(),
                     builder: (context, snapshot) => snapshot.hasData
-                        ? Image.memory(snapshot.data! as dynamic, fit: BoxFit.cover)
+                        ? Image.memory(Uint8List.fromList(snapshot.data!), fit: BoxFit.cover)
                         : const Center(child: CircularProgressIndicator()),
                   ),
                   if (_analyzing) Container(color: Colors.black54, child: const Center(child: CircularProgressIndicator(color: Colors.white))),
