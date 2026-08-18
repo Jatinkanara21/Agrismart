@@ -1,21 +1,25 @@
-name: Train AgriSmart Offline Disease Model
+name: Train and Deploy AgriSmart Offline AI
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'ml/**'
-      - 'lib/services/local_disease_service.dart'
-      - '.github/workflows/train-offline-model.yml'
   workflow_dispatch:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: agrismart-offline-ai
+  cancel-in-progress: false
 
 jobs:
-  train:
+  train-build-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,8 +34,20 @@ jobs:
       - name: Install ML dependencies
         run: pip install -r ml/requirements.txt
 
-      - name: Train MobileNetV2
+      - name: Train offline disease model
         run: python ml/train.py
+
+      - name: Verify trained model
+        run: |
+          test -s ml/output/plant_disease.tflite
+          test -s ml/output/labels.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          labels = json.loads(Path('ml/output/labels.json').read_text())
+          assert len(labels) == 38, f'Expected 38 labels, got {len(labels)}'
+          print(f'Model verified: {len(labels)} classes')
+          PY
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -39,17 +55,41 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Copy trained model into Flutter assets
+      - name: Enable Flutter Web
+        run: flutter config --enable-web
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Install trained model into Flutter assets
         run: |
           mkdir -p assets/models
           cp ml/output/plant_disease.tflite assets/models/plant_disease.tflite
+
+      - name: Analyze Flutter project
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build Flutter Web with offline AI
+        run: flutter build web --release --base-href "/Agrismart/"
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
       - name: Commit trained model
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/models/plant_disease.tflite
-          git commit -m "ml: add trained offline plant disease model" || echo "No model changes to commit"
+          git commit -m "ml: add trained offline plant disease model" || echo "Model already committed"
           git push
 
       - name: Upload training outputs
