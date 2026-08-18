@@ -1,8 +1,6 @@
 name: Deploy AgriSmart Web to GitHub Pages
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -32,6 +30,9 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
+
+      - name: Verify offline AI model
+        run: test -s assets/models/plant_disease.tflite
 
       - name: Build Flutter web
         run: flutter build web --release --base-href "/Agrismart/"
