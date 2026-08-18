@@ -1,17 +1,58 @@
-# agrismart
+# AgriSmart
 
-A new Flutter project.
+AgriSmart is a premium Flutter smart-agriculture application designed around a Material 3 design system, modular providers, and API-ready mock services.
 
-## Getting Started
+## Implemented
 
-This project is a starting point for a Flutter application.
+- Animated splash and 3-step onboarding
+- Login, register, forgot-password flow, and Google-login UI
+- Floating bottom navigation: Home, Crops, Scan, Market, Profile
+- Premium responsive dashboard with weather, farm stats, quick actions, and insights
+- Provider-backed crop CRUD flow with realistic mock data
+- Crop progress, health states, and detail navigation
+- Disease detection with camera/gallery image selection and mock AI analysis
+- 7-day weather forecast, UV, rain, humidity, wind, and prioritized recommendations
+- Interactive market price trend charts using `fl_chart`
+- Farm management with soil type, pH, moisture, and add-farm UI
+- Notification center with unread/read states
+- Profile and preferences screens
+- Material 3 light/dark themes
+- Pull-to-refresh, loading, empty, and retry states
 
-A few resources to get you started if this is your first Flutter project:
+## Architecture
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```text
+lib/
+├── main.dart
+├── app.dart
+├── core/
+│   ├── constants/
+│   ├── theme/
+│   ├── routes/
+│   └── utils/
+├── models/
+├── services/
+├── providers/
+├── widgets/
+└── screens/
+    ├── splash/
+    ├── onboarding/
+    ├── auth/
+    ├── home/
+    ├── crops/
+    ├── disease_detection/
+    ├── weather/
+    ├── market/
+    ├── farm/
+    ├── notifications/
+    └── profile/
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Run
+
+```bash
+flutter pub get
+flutter run
+```
+
+The app is intentionally API-key-free. `MockApiService` is the backend seam for replacing dummy data with REST/Firebase/etc. later.
