@@ -1,12 +1,24 @@
 # AgriSmart
 
-AgriSmart is a premium Flutter smart-agriculture application built with Material 3, Provider, mock backend services, and a real multimodal AI disease-analysis integration.
+AgriSmart is a premium Flutter smart-agriculture application built with Material 3, Provider, mock backend services, and on-device plant-disease inference.
 
 ## AI model
 
-Plant disease analysis uses **Google Gemini 2.5 Flash-Lite** (`gemini-2.5-flash-lite`). The model accepts text plus image input and returns structured JSON containing disease, confidence, symptoms, treatment, and prevention. Gemini's current documentation lists this stable model as a multimodal, cost-efficient model suitable for classification and image understanding.
+Plant disease analysis is designed around a **MobileNetV2 + PlantVillage** classifier exported to TensorFlow Lite/LiteRT. The Flutter app runs the classifier locally through `flutter_litert`; no Gemini/OpenAI API key is required.
 
-The AI client lives in `lib/services/gemini_disease_service.dart` and reads the API key from the compile-time `GEMINI_API_KEY` environment value. No key is stored in the repository.
+The training pipeline is in `ml/`. It trains on the public PlantVillage dataset and exports:
+
+```text
+ml/output/plant_disease.tflite
+```
+
+Copy the resulting model to:
+
+```text
+assets/models/plant_disease.tflite
+```
+
+The runtime lives in `lib/services/local_disease_service.dart`.
 
 ## Implemented
 
@@ -16,7 +28,7 @@ The AI client lives in `lib/services/gemini_disease_service.dart` and reads the 
 - Premium responsive dashboard with weather, farm stats, quick actions, and insights
 - Provider-backed crop CRUD flow with realistic mock data
 - Crop progress, health states, and detail navigation
-- Real Gemini multimodal plant-image analysis with confidence, symptoms, treatment, and prevention
+- On-device plant-disease classifier interface
 - Camera/gallery image selection
 - 7-day weather forecast, UV, rain, humidity, wind, and prioritized recommendations
 - Interactive market price trend charts using `fl_chart`
@@ -41,7 +53,7 @@ lib/
 ├── models/
 ├── services/
 │   ├── mock_api_service.dart
-│   └── gemini_disease_service.dart
+│   └── local_disease_service.dart
 ├── providers/
 ├── widgets/
 └── screens/
@@ -56,17 +68,30 @@ lib/
     ├── farm/
     ├── notifications/
     └── profile/
+
+ml/
+├── train.py
+├── requirements.txt
+└── README.md
 ```
 
-## Local run with AI
+## Run
 
 ```bash
 flutter pub get
-flutter run --dart-define=GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+flutter run
 ```
 
-## GitHub Pages deployment
+No AI API key is required.
 
-The Pages workflow passes the `GEMINI_API_KEY` GitHub Actions secret into the Flutter web build. Add a repository secret named `GEMINI_API_KEY` before deploying if you want AI analysis enabled on the hosted app. Without the secret, the app still builds and the AI screen clearly reports that Gemini is not configured.
+## Train the disease model
 
-**Security note:** a Flutter web build embeds compile-time values into client-side JavaScript. For a public production application, the recommended architecture is to move the Gemini call behind a secure backend/proxy and keep the API key server-side. The current direct client integration is intended for development/demo deployment.
+```bash
+python ml/train.py
+```
+
+Then copy `ml/output/plant_disease.tflite` to `assets/models/plant_disease.tflite`.
+
+## Important model limitation
+
+PlantVillage is a strong research benchmark but contains many controlled-background leaf images. A model trained only on it should not be treated as a definitive field diagnosis. AgriSmart should eventually be validated with diverse field photographs and agronomist-reviewed data before being used for treatment decisions.
