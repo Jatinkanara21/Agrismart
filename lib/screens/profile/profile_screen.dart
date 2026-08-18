@@ -1,103 +1,62 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../auth/login_screen.dart';
+import '../farm/farm_screen.dart';
+import '../notifications/notifications_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool notifications = true;
+  bool darkMode = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            _buildProfileHeader(),
-            const SizedBox(height: 30),
-            _buildSection(
-              'General Settings',
-              [
-                _buildMenuItem(Icons.person_outline, 'Edit Profile'),
-                _buildMenuItem(Icons.landscape_outlined, 'My Farms'),
-                _buildMenuItem(Icons.notifications_none, 'Notifications', trailing: const Text('ON', style: TextStyle(color: AppColors.primary))),
-                _buildMenuItem(Icons.language, 'Language', trailing: const Text('English')),
-              ],
-            ),
-            _buildSection(
-              'App Preferences',
-              [
-                _buildMenuItem(Icons.dark_mode_outlined, 'Dark Mode', trailing: Switch(value: false, onChanged: (v) {})),
-                _buildMenuItem(Icons.help_outline, 'Help & Support'),
-                _buildMenuItem(Icons.info_outline, 'About AgriSmart'),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: OutlinedButton(
-                onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const LoginScreen())),
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 56),
-                  side: const BorderSide(color: Colors.red),
-                  foregroundColor: Colors.red,
-                ),
-                child: const Text('Logout'),
-              ),
-            ),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
+      appBar: AppBar(title: const Text('Profile & settings', style: TextStyle(fontWeight: FontWeight.w800))),
+      body: ListView(padding: const EdgeInsets.fromLTRB(20, 10, 20, 110), children: [
+        Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.primaryDark, AppColors.primary]), borderRadius: BorderRadius.circular(24)), child: Row(children: [
+          const CircleAvatar(radius: 32, backgroundColor: Colors.white24, child: Icon(Icons.person_rounded, color: Colors.white, size: 34)),
+          const SizedBox(width: 14), const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Jatin Kanara', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 20)), SizedBox(height: 4), Text('Smart farmer workspace', style: TextStyle(color: Colors.white70))])),
+          IconButton(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile editor coming next.'))), icon: const Icon(Icons.edit_outlined, color: Colors.white)),
+        ])),
+        const SizedBox(height: 22),
+        _Section(title: 'Workspace', children: [
+          _Item(icon: Icons.landscape_outlined, title: 'My farms', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FarmScreen()))),
+          _Item(icon: Icons.notifications_none_rounded, title: 'Notifications', trailing: Switch(value: notifications, onChanged: (v) => setState(() => notifications = v)), onTap: () => setState(() => notifications = !notifications)),
+        ]),
+        const SizedBox(height: 14),
+        _Section(title: 'Preferences', children: [
+          _Item(icon: Icons.dark_mode_outlined, title: 'Dark mode', trailing: Switch(value: darkMode, onChanged: (v) => setState(() => darkMode = v)), onTap: () => setState(() => darkMode = !darkMode)),
+          _Item(icon: Icons.language_outlined, title: 'Language', trailing: const Text('English', style: TextStyle(color: AppColors.textSecondary)), onTap: () {}),
+          _Item(icon: Icons.notifications_active_outlined, title: 'Notification center', onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
+        ]),
+        const SizedBox(height: 14),
+        _Section(title: 'Support', children: [
+          _Item(icon: Icons.help_outline_rounded, title: 'Help & support', onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Support center opened.')))),
+          _Item(icon: Icons.info_outline_rounded, title: 'About AgriSmart', onTap: () => showAboutDialog(context: context, applicationName: 'AgriSmart', applicationVersion: '1.0.0', applicationLegalese: 'Smart farming intelligence')),
+        ]),
+        const SizedBox(height: 18),
+        OutlinedButton.icon(onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen())), icon: const Icon(Icons.logout_rounded), label: const Text('Log out'), style: OutlinedButton.styleFrom(foregroundColor: AppColors.error, side: const BorderSide(color: AppColors.error))),
+      ]),
     );
   }
+}
 
-  Widget _buildProfileHeader() {
-    return Column(
-      children: const [
-        CircleAvatar(
-          radius: 60,
-          backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=farmer'),
-        ),
-        SizedBox(height: 16),
-        Text('Farmer John', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-        Text('john.farmer@email.com', style: TextStyle(color: AppColors.textSecondary)),
-        SizedBox(height: 8),
-        Chip(
-          label: Text('Premium Member', style: TextStyle(color: Colors.white, fontSize: 12)),
-          backgroundColor: AppColors.primary,
-        ),
-      ],
-    );
-  }
+class _Section extends StatelessWidget {
+  final String title; final List<Widget> children;
+  const _Section({required this.title, required this.children});
+  @override
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800)), const SizedBox(height: 8), Container(decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: .4))), child: Column(children: children))]);
+}
 
-  Widget _buildSection(String title, List<Widget> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-          child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primary)),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(children: items),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildMenuItem(IconData icon, String title, {Widget? trailing}) {
-    return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary),
-      title: Text(title),
-      trailing: trailing ?? const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-      onTap: () {},
-    );
-  }
+class _Item extends StatelessWidget {
+  final IconData icon; final String title; final Widget? trailing; final VoidCallback onTap;
+  const _Item({required this.icon, required this.title, required this.onTap, this.trailing});
+  @override
+  Widget build(BuildContext context) => ListTile(onTap: onTap, leading: Icon(icon, color: AppColors.textSecondary), title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)), trailing: trailing ?? const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary));
 }
