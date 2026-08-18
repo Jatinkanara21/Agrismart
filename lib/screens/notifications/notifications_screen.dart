@@ -1,93 +1,37 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../models/app_notification.dart';
+import '../../services/mock_api_service.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  final _service = MockApiService();
+  List<AppNotification> items = const [];
+  bool loading = true;
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  Future<void> _load() async { setState(() => loading = true); final data = await _service.fetchNotifications(); if (mounted) setState(() { items = data; loading = false; }); }
+
+  void _markRead(int index) => setState(() => items[index] = items[index].copyWith(isRead: true));
+
+  IconData _icon(NotificationType type) => switch (type) { NotificationType.weather => Icons.cloud_outlined, NotificationType.crop => Icons.eco_outlined, NotificationType.market => Icons.trending_up_rounded, NotificationType.system => Icons.info_outline_rounded };
+  Color _color(NotificationType type) => switch (type) { NotificationType.weather => AppColors.info, NotificationType.crop => AppColors.primary, NotificationType.market => AppColors.warning, NotificationType.system => AppColors.secondary };
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> notifications = [
-      {
-        'title': 'Irrigation Reminder',
-        'message': 'Time to irrigate your Tomato field. Optimal time is now.',
-        'time': '10 mins ago',
-        'type': 'alert',
-        'isRead': false,
-      },
-      {
-        'title': 'Weather Warning',
-        'message': 'Heavy rain expected tomorrow. Secure your greenhouse.',
-        'time': '2 hours ago',
-        'type': 'weather',
-        'isRead': false,
-      },
-      {
-        'title': 'Price Update',
-        'message': 'Market price for Corn increased by 5%.',
-        'time': '5 hours ago',
-        'type': 'market',
-        'isRead': true,
-      },
-      {
-        'title': 'Fertilizer Time',
-        'message': 'Scheduled fertilizer application for Wheat field.',
-        'time': '1 day ago',
-        'type': 'crop',
-        'isRead': true,
-      },
-    ];
-
+    final unread = items.where((n) => !n.isRead).length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
-      body: ListView.builder(
-        itemCount: notifications.length,
-        itemBuilder: (context, index) {
-          final notification = notifications[index];
-          return Container(
-            color: notification['isRead'] ? Colors.transparent : AppColors.primary.withOpacity(0.05),
-            child: ListTile(
-              leading: _getIcon(notification['type']),
-              title: Text(notification['title'], style: TextStyle(fontWeight: notification['isRead'] ? FontWeight.normal : FontWeight.bold)),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(notification['message']),
-                  const SizedBox(height: 4),
-                  Text(notification['time'], style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                ],
-              ),
-              isThreeLine: true,
-              onTap: () {},
-            ),
-          );
-        },
-      ),
-    );
+      appBar: AppBar(title: Text(unread > 0 ? 'Notifications ($unread)' : 'Notifications', style: const TextStyle(fontWeight: FontWeight.w800)), actions: [IconButton(onPressed: () => setState(() => items = [for (final item in items) item.copyWith(isRead: true)]), icon: const Icon(Icons.done_all_rounded))]),
+      body: RefreshIndicator(onRefresh: _load, color: AppColors.primary, child: loading ? const Center(child: CircularProgressIndicator()) : items.isEmpty ? ListView(children: const [SizedBox(height: 200), Center(child: Text('You are all caught up.'))]) : ListView.separated(padding: const EdgeInsets.fromLTRB(14, 10, 14, 30), physics: const AlwaysScrollableScrollPhysics(), itemCount: items.length, separatorBuilder: (_, __) => const SizedBox(height: 7), itemBuilder: (context, index) { final n = items[index]; final color = _color(n.type); return Card(color: n.isRead ? null : color.withValues(alpha: .06), child: ListTile(onTap: () => _markRead(index), contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5), leading: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withValues(alpha: .11), borderRadius: BorderRadius.circular(13)), child: Icon(_icon(n.type), color: color)), title: Row(children: [Expanded(child: Text(n.title, style: const TextStyle(fontWeight: FontWeight.w800))), if (!n.isRead) Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle))]), subtitle: Padding(padding: const EdgeInsets.only(top: 4), child: Text('${n.message}
+${_relative(n.createdAt)}', style: const TextStyle(height: 1.4))), isThreeLine: true)); }));
   }
 
-  Widget _getIcon(String type) {
-    IconData icon;
-    Color color;
-    switch (type) {
-      case 'alert':
-        icon = Icons.warning_amber_rounded;
-        color = Colors.orange;
-        break;
-      case 'weather':
-        icon = Icons.cloudy_snowing;
-        color = Colors.blue;
-        break;
-      case 'market':
-        icon = Icons.trending_up;
-        color = Colors.green;
-        break;
-      default:
-        icon = Icons.info_outline;
-        color = AppColors.primary;
-    }
-    return CircleAvatar(
-      backgroundColor: color.withOpacity(0.1),
-      child: Icon(icon, color: color, size: 20),
-    );
-  }
+  String _relative(DateTime time) { final delta = DateTime.now().difference(time); if (delta.inMinutes < 60) return '${delta.inMinutes}m ago'; if (delta.inHours < 24) return '${delta.inHours}h ago'; return '${delta.inDays}d ago'; }
 }
