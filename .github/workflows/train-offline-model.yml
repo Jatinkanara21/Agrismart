@@ -1,6 +1,12 @@
 name: Train AgriSmart Offline Disease Model
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'ml/**'
+      - 'lib/services/local_disease_service.dart'
+      - '.github/workflows/train-offline-model.yml'
   workflow_dispatch:
 
 permissions:
@@ -34,7 +40,9 @@ jobs:
           cache: true
 
       - name: Copy trained model into Flutter assets
-        run: cp ml/output/plant_disease.tflite assets/models/plant_disease.tflite
+        run: |
+          mkdir -p assets/models
+          cp ml/output/plant_disease.tflite assets/models/plant_disease.tflite
 
       - name: Commit trained model
         run: |
