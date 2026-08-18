@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
-  static const Color primary = Color(0xFF2E7D32); // Deep Green
-  static const Color primaryLight = Color(0xFF60AD5E);
-  static const Color primaryDark = Color(0xFF005005);
-  
-  static const Color secondary = Color(0xFF8D6E63); // Earthy Brown
-  static const Color accent = Color(0xFFFFC107); // Amber/Sun
-  
-  static const Color background = Color(0xFFF5F5F5);
-  static const Color surface = Colors.white;
-  static const Color error = Color(0xFFD32F2F);
-  
-  static const Color textPrimary = Color(0xFF212121);
-  static const Color textSecondary = Color(0xFF757575);
-  
-  // Earthy tones
-  static const Color beige = Color(0xFFF5F5DC);
-  static const Color leafGreen = Color(0xFF81C784);
+abstract final class AppColors {
+  static const primary = Color(0xFF2E7D32);
+  static const primaryLight = Color(0xFF66BB6A);
+  static const primaryDark = Color(0xFF1B5E20);
+  static const secondary = Color(0xFF8D6E63);
+  static const accent = Color(0xFFFFB300);
+  static const background = Color(0xFFF5F7F3);
+  static const surface = Colors.white;
+  static const beige = Color(0xFFF3EBDD);
+  static const error = Color(0xFFD32F2F);
+  static const warning = Color(0xFFF9A825);
+  static const info = Color(0xFF1565C0);
+  static const textPrimary = Color(0xFF17301A);
+  static const textSecondary = Color(0xFF6C7A6E);
+  static const border = Color(0xFFDCE5DD);
+  static const scaffoldDark = Color(0xFF0D1510);
+  static const surfaceDark = Color(0xFF162119);
 }
