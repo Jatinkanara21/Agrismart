@@ -1,6 +1,8 @@
 # AgriSmart Offline AI Training
 
-AgriSmart now uses an on-device LiteRT/TFLite classifier instead of Gemini. The training pipeline uses the public PlantVillage dataset, which contains about 54,303 leaf images across 38 crop/disease classes. The TensorFlow Datasets catalog documents the 38-class dataset and its 54,303 training examples. citeturn0search1
+AgriSmart now uses an on-device LiteRT/TFLite classifier instead of Gemini. The training pipeline uses the public PlantVillage dataset, which contains about 54,303 leaf images across 38 crop/disease classes.
+
+Dataset reference: https://www.tensorflow.org/datasets/catalog/plant_village
 
 ## 1. Create a Python environment
 
@@ -58,4 +60,4 @@ flutter run
 
 ## Important accuracy note
 
-PlantVillage images are largely controlled-background leaf images. High benchmark accuracy does not automatically mean the same accuracy on farmer-captured field photos. A production agricultural product should add diverse field images, crop/region-specific validation, and expert review before making treatment decisions. citeturn0search1turn2search7
+PlantVillage images are largely controlled-background leaf images. High benchmark accuracy does not automatically mean the same accuracy on farmer-captured field photos. A production agricultural product should add diverse field images, crop/region-specific validation, and expert review before making treatment decisions.
