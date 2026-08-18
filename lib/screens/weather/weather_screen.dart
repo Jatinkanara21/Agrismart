@@ -1,149 +1,93 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../models/weather.dart';
+import '../../providers/dashboard_provider.dart';
+import '../../services/mock_api_service.dart';
 
 class WeatherScreen extends StatelessWidget {
   const WeatherScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => DashboardProvider(MockApiService())..load(),
+      child: const _WeatherView(),
+    );
+  }
+}
+
+class _WeatherView extends StatelessWidget {
+  const _WeatherView();
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<DashboardProvider>();
     return Scaffold(
-      backgroundColor: Colors.blue.shade50,
-      appBar: AppBar(
-        title: const Text('Weather Forecast'),
-        backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.textPrimary,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            _buildCurrentWeather(),
-            const SizedBox(height: 24),
-            _buildRecommendationCard(),
-            const SizedBox(height: 24),
-            _buildForecastList(),
-            const SizedBox(height: 24),
-            _buildWeatherDetails(),
-          ],
-        ),
+      appBar: AppBar(title: const Text('Weather & insights', style: TextStyle(fontWeight: FontWeight.w800))),
+      body: RefreshIndicator(
+        onRefresh: provider.load,
+        color: AppColors.primary,
+        child: provider.loading && provider.weather == null
+          ? const Center(child: CircularProgressIndicator())
+          : provider.weather == null
+            ? ListView(children: const [SizedBox(height: 200), Center(child: Text('Weather data unavailable. Pull to retry.'))])
+            : ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 110), physics: const AlwaysScrollableScrollPhysics(), children: [
+                _CurrentCard(data: provider.weather!),
+                const SizedBox(height: 18),
+                const Text('Smart recommendations', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                const SizedBox(height: 10),
+                _Recommendation(icon: Icons.water_drop_outlined, title: 'Reduce irrigation tomorrow', body: 'Rain probability is above 60% for part of the day.', color: AppColors.info),
+                _Recommendation(icon: Icons.spa_outlined, title: 'Ideal fertilizer window', body: 'Morning conditions are calm enough for foliar application.', color: AppColors.primary),
+                _Recommendation(icon: Icons.warning_amber_rounded, title: 'Watch humidity', body: 'Higher humidity can increase fungal pressure on tomatoes.', color: AppColors.warning),
+                const SizedBox(height: 18),
+                const Text('7-day forecast', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                const SizedBox(height: 10),
+                ...provider.weather!.forecast.map((day) => _ForecastTile(day: day)),
+              ]),
       ),
     );
   }
+}
 
-  Widget _buildCurrentWeather() {
-    return Column(
-      children: [
-        const Text('California, USA', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        const Text('Monday, 20 May', style: TextStyle(color: AppColors.textSecondary)),
-        const SizedBox(height: 20),
-        const Icon(Icons.wb_sunny, size: 80, color: Colors.orange),
-        const SizedBox(height: 10),
-        const Text('28°', style: TextStyle(fontSize: 64, fontWeight: FontWeight.w300)),
-        const Text('Mostly Sunny', style: TextStyle(fontSize: 18, color: AppColors.textSecondary)),
-      ],
-    );
-  }
+class _CurrentCard extends StatelessWidget {
+  final WeatherSnapshot data;
+  const _CurrentCard({required this.data});
 
-  Widget _buildRecommendationCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.lightbulb_outline, color: AppColors.primary),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Good day for irrigation and applying fertilizers. Avoid spraying pesticides due to moderate wind.',
-              style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(22),
+    decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.primaryDark, AppColors.primary]), borderRadius: BorderRadius.circular(26)),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(data.location, style: const TextStyle(color: Colors.white70)),
+      const SizedBox(height: 8),
+      Row(children: [const Icon(Icons.wb_sunny_rounded, color: AppColors.accent, size: 38), const SizedBox(width: 12), Text('${data.temperature}°C', style: const TextStyle(color: Colors.white, fontSize: 42, fontWeight: FontWeight.w800)), const Spacer(), Text(data.condition, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700))]),
+      const SizedBox(height: 18),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        _Metric('Humidity', '${data.humidity}%'), _Metric('Rain', '${data.rainChance}%'), _Metric('Wind', data.wind), _Metric('UV', '6'),
+      ]),
+    ]),
+  );
+}
 
-  Widget _buildForecastList() {
-    final days = ['Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('7-Day Forecast', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 100,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: days.length,
-            itemBuilder: (context, index) {
-              return Container(
-                width: 70,
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Text(days[index], style: const TextStyle(color: AppColors.textSecondary)),
-                    const SizedBox(height: 8),
-                    const Icon(Icons.wb_cloudy_outlined, size: 24, color: Colors.blue),
-                    const SizedBox(height: 8),
-                    const Text('24°', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+class _Metric extends StatelessWidget {
+  final String label, value;
+  const _Metric(this.label, this.value);
+  @override
+  Widget build(BuildContext context) => Column(children: [Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text(label, style: const TextStyle(color: Colors.white60, fontSize: 11))]);
+}
 
-  Widget _buildWeatherDetails() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        childAspectRatio: 2,
-        children: [
-          _buildDetail('Humidity', '65%', Icons.water_drop),
-          _buildDetail('Wind', '12 km/h', Icons.air),
-          _buildDetail('UV Index', 'Low (2)', Icons.wb_sunny),
-          _buildDetail('Rain', '10%', Icons.umbrella),
-          _buildDetail('Sunrise', '06:12 AM', Icons.wb_twilight),
-          _buildDetail('Sunset', '07:45 PM', Icons.nights_stay),
-        ],
-      ),
-    );
-  }
+class _Recommendation extends StatelessWidget {
+  final IconData icon; final String title, body; final Color color;
+  const _Recommendation({required this.icon, required this.title, required this.body, required this.color});
+  @override
+  Widget build(BuildContext context) => Container(margin: const EdgeInsets.only(bottom: 9), padding: const EdgeInsets.all(15), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: .4))), child: Row(children: [Container(padding: const EdgeInsets.all(9), decoration: BoxDecoration(color: color.withValues(alpha: .1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w700)), const SizedBox(height: 3), Text(body, style: const TextStyle(color: AppColors.textSecondary, height: 1.3))]))]));
+}
 
-  Widget _buildDetail(String label, String value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 20, color: AppColors.primary),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ],
-    );
-  }
+class _ForecastTile extends StatelessWidget {
+  final WeatherDay day;
+  const _ForecastTile({required this.day});
+  @override
+  Widget build(BuildContext context) => Card(margin: const EdgeInsets.only(bottom: 8), child: ListTile(contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), leading: const Icon(Icons.cloud_outlined, color: AppColors.info), title: Text('${_weekday(day.date.weekday)} • ${day.condition}', style: const TextStyle(fontWeight: FontWeight.w700)), subtitle: Text('Rain ${day.rainChance}% • Humidity ${day.humidity}% • UV ${day.uvIndex}'), trailing: Text('${day.temperature}° / ${day.low}°', style: const TextStyle(fontWeight: FontWeight.w800)));
+  String _weekday(int n) => const ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][n - 1];
 }
