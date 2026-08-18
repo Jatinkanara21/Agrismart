@@ -1,0 +1,5 @@
+tensorflow>=2.16,<2.21
+tensorflow-datasets>=4.9
+numpy>=1.26
+pillow>=10.0
+scikit-learn>=1.4
