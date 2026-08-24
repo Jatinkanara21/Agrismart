@@ -81,3 +81,5 @@ Then copy `ml/output/plant_disease.tflite` to `assets/models/plant_disease.tflit
 PlantVillage is a strong research benchmark but contains many controlled-background leaf images. A model trained only on it should not be treated as a definitive field diagnosis. AgriSmart should eventually be validated with diverse field photographs and agronomist-reviewed data before being used for treatment decisions.
 
 CI note: keep `flutter analyze --no-fatal-infos` clean of compile/analyzer errors before merging production changes.
+
+CI verification branch created to validate the current `main` revision with the dedicated analyze workflow.
