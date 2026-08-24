@@ -13,17 +13,27 @@ class AgriProvider extends ChangeNotifier {
   final decisionService = DecisionEngineService();
 
   Farm farm = const Farm(
-    name: 'Green Valley Farm', area: 4.8, location: 'Ahmedabad, Gujarat',
-    crop: 'Wheat', soil: 'Loam', moisture: 31,
+    name: 'Green Valley Farm',
+    area: 4.8,
+    location: 'Ahmedabad, Gujarat',
+    crop: 'Wheat',
+    soil: 'Loam',
+    moisture: 31,
   );
+
   Map<String, dynamic> weather = const {
-    'temperature': 29, 'humidity': 78, 'rainProbability': 82,
-    'wind': 14, 'uv': 6, 'condition': 'Partly cloudy',
+    'temperature': 29,
+    'humidity': 78,
+    'rainProbability': 82,
+    'wind': 14,
+    'uv': 6,
+    'condition': 'Partly cloudy',
   };
+
   List<Insight> insights = const [];
   List<CropRecommendation> cropRecommendations = const [];
   DiseaseResult? disease;
-  YieldResult? yield;
+  YieldResult? yieldResult;
   List<Map<String, dynamic>> marketPrices = const [];
   List<ChatMessage> messages = const [];
   bool busy = false;
@@ -34,7 +44,10 @@ class AgriProvider extends ChangeNotifier {
     notifyListeners();
     try {
       weather = await weatherService.getCurrent();
-      insights = await decisionService.buildInsights(farm: farm, weather: weather);
+      insights = await decisionService.buildInsights(
+        farm: farm,
+        weather: weather,
+      );
       marketPrices = await marketService.getPrices();
     } finally {
       busy = false;
@@ -47,8 +60,15 @@ class AgriProvider extends ChangeNotifier {
     notifyListeners();
     try {
       cropRecommendations = await cropService.recommend(
-        n: 82, p: 48, k: 42, ph: 6.7, temperature: 29,
-        humidity: 78, rainfall: 185, soil: farm.soil, season: 'Kharif',
+        n: 82,
+        p: 48,
+        k: 42,
+        ph: 6.7,
+        temperature: 29,
+        humidity: 78,
+        rainfall: 185,
+        soil: farm.soil,
+        season: 'Kharif',
       );
     } finally {
       busy = false;
@@ -57,8 +77,12 @@ class AgriProvider extends ChangeNotifier {
   }
 
   Future<void> scanDisease({required ImageSource source}) async {
-    final file = await ImagePicker().pickImage(source: source, imageQuality: 80);
+    final file = await ImagePicker().pickImage(
+      source: source,
+      imageQuality: 80,
+    );
     if (file == null) return;
+
     busy = true;
     notifyListeners();
     try {
@@ -73,9 +97,12 @@ class AgriProvider extends ChangeNotifier {
     busy = true;
     notifyListeners();
     try {
-      yield = await yieldService.predict(
-        crop: farm.crop, area: farm.area, moisture: farm.moisture,
-        fertilizer: 70, historicalYield: 4.35,
+      yieldResult = await yieldService.predict(
+        crop: farm.crop,
+        area: farm.area,
+        moisture: farm.moisture,
+        fertilizer: 70,
+        historicalYield: 4.35,
       );
     } finally {
       busy = false;
@@ -85,10 +112,25 @@ class AgriProvider extends ChangeNotifier {
 
   Future<void> askBot(String prompt) async {
     if (prompt.trim().isEmpty) return;
-    messages = [...messages, ChatMessage(text: prompt, isUser: true, time: DateTime.now())];
+    messages = [
+      ...messages,
+      ChatMessage(
+        text: prompt.trim(),
+        isUser: true,
+        time: DateTime.now(),
+      ),
+    ];
     notifyListeners();
+
     final answer = await botService.ask(prompt, language: language);
-    messages = [...messages, ChatMessage(text: answer, isUser: false, time: DateTime.now())];
+    messages = [
+      ...messages,
+      ChatMessage(
+        text: answer,
+        isUser: false,
+        time: DateTime.now(),
+      ),
+    ];
     notifyListeners();
   }
 
