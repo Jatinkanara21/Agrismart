@@ -1,5 +1,5 @@
 tensorflow>=2.16,<2.21
-tensorflow-datasets>=4.9
+datasets>=3.0
 importlib-resources>=6.4
 numpy>=1.26
 pillow>=10.0
