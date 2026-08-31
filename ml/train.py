@@ -1,9 +1,8 @@
 """Train AgriSmart's offline plant-disease classifier.
 
-Uses Hugging Face PlantVillage. The loader is robust to datasets that expose
-only a subset of classes in the first streamed records: it samples the full
-requested budget, builds the label map from all samples, and checks coverage.
-Exports a MobileNetV2 TFLite model for the Flutter app.
+Uses Hugging Face PlantVillage and explicitly samples every one of its
+38 classes. This avoids relying on dataset ordering, which previously caused
+the streamed subset to contain only classes 0-15.
 """
 from pathlib import Path
 import json
@@ -16,51 +15,75 @@ BATCH_SIZE = 32
 MAX_IMAGES = 20000
 HEAD_EPOCHS = 2
 FINE_TUNE_EPOCHS = 2
+NUM_CLASSES = 38
 OUTPUT = Path("ml/output")
 OUTPUT.mkdir(parents=True, exist_ok=True)
 AUTOTUNE = tf.data.AUTOTUNE
 
 print("Loading PlantVillage from Hugging Face...")
-hf_ds = load_dataset("geraldmc/plantvillage-full", revision="v0.1.0", split="train", streaming=True)
+hf_ds = load_dataset(
+    "geraldmc/plantvillage-full",
+    revision="v0.1.0",
+    split="train",
+    streaming=True,
+)
 
-# Stream the requested budget. The previous implementation assumed the first
-# 20k records contained every class, which is not guaranteed by dataset order.
+# The source is ordered by class. Sample a balanced quota from every class
+# instead of taking the first N records. 20,000 / 38 gives 526 per class,
+# leaving 12 extra slots distributed deterministically.
+base_quota = MAX_IMAGES // NUM_CLASSES
+extra = MAX_IMAGES % NUM_CLASSES
+quotas = {i: base_quota + (1 if i < extra else 0) for i in range(NUM_CLASSES)}
+collected = {i: 0 for i in range(NUM_CLASSES)}
 samples = []
+class_names_by_id = {}
+
 for sample in hf_ds:
-    image = sample["image"].convert("RGB")
     label = int(sample["class_idx"])
+    if label < 0 or label >= NUM_CLASSES:
+        continue
     class_name = str(sample["class_label"])
+    class_names_by_id[label] = class_name
+    if collected[label] >= quotas[label]:
+        if all(collected[i] >= quotas[i] for i in range(NUM_CLASSES)):
+            break
+        continue
+
+    image = sample["image"].convert("RGB")
     samples.append((np.asarray(image), label, class_name))
-    if len(samples) >= MAX_IMAGES:
+    collected[label] += 1
+
+    if all(collected[i] >= quotas[i] for i in range(NUM_CLASSES)):
         break
 
-if not samples:
-    raise RuntimeError("PlantVillage dataset returned no images")
-
-class_names_by_id = {}
-for _, label, class_name in samples:
-    class_names_by_id[label] = class_name
-
-print(f"Observed class IDs: {sorted(class_names_by_id)}")
-missing = sorted(set(range(38)) - set(class_names_by_id))
+missing = [i for i in range(NUM_CLASSES) if collected[i] == 0]
 if missing:
-    raise RuntimeError(
-        "The streamed subset does not contain all 38 PlantVillage classes. "
-        f"Missing class IDs: {missing}. Increase MAX_IMAGES or use a shuffled/full dataset split."
-    )
+    raise RuntimeError(f"PlantVillage stream did not contain classes: {missing}")
+underfilled = {i: n for i, n in collected.items() if n < quotas[i]}
+if underfilled:
+    raise RuntimeError(f"Could not collect the requested balanced sample: {underfilled}")
 
-num_classes = 38
-class_names = [class_names_by_id[i] for i in range(num_classes)]
+class_names = [class_names_by_id[i] for i in range(NUM_CLASSES)]
 use_count = len(samples)
-print(f"Classes: {num_classes}; using {use_count} images")
+print(f"Classes: {NUM_CLASSES}; using {use_count} balanced images")
+print(f"Images per class: {collected}")
 
 images = np.stack([x[0] for x in samples])
 labels = np.asarray([x[1] for x in samples], dtype=np.int32)
 
+# Deterministic stratified split: 90/10 within each class.
 rng = np.random.default_rng(42)
-indices = rng.permutation(use_count)
-train_count = int(use_count * 0.9)
-train_idx, val_idx = indices[:train_count], indices[train_count:]
+train_parts, val_parts = [], []
+for class_id in range(NUM_CLASSES):
+    class_indices = np.flatnonzero(labels == class_id)
+    class_indices = rng.permutation(class_indices)
+    split = int(len(class_indices) * 0.9)
+    train_parts.append(class_indices[:split])
+    val_parts.append(class_indices[split:])
+train_idx = np.concatenate(train_parts)
+val_idx = np.concatenate(val_parts)
+train_idx = rng.permutation(train_idx)
+val_idx = rng.permutation(val_idx)
 train_images, train_labels = images[train_idx], labels[train_idx]
 val_images, val_labels = images[val_idx], labels[val_idx]
 
@@ -80,7 +103,7 @@ def prepare(image, label, training=False):
     return preprocess(image), label
 
 train_ds = tf.data.Dataset.from_tensor_slices((train_images, train_labels))
-train_ds = (train_ds.shuffle(min(4096, train_count), seed=42)
+train_ds = (train_ds.shuffle(min(4096, len(train_idx)), seed=42)
             .map(lambda x, y: prepare(x, y, True), num_parallel_calls=AUTOTUNE)
             .batch(BATCH_SIZE).prefetch(AUTOTUNE))
 val_ds = tf.data.Dataset.from_tensor_slices((val_images, val_labels))
@@ -95,7 +118,7 @@ inputs = tf.keras.Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3))
 x = base(inputs, training=False)
 x = tf.keras.layers.GlobalAveragePooling2D()(x)
 x = tf.keras.layers.Dropout(0.2)(x)
-outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(x)
+outputs = tf.keras.layers.Dense(NUM_CLASSES, activation="softmax")(x)
 model = tf.keras.Model(inputs, outputs)
 
 callbacks = [
@@ -122,7 +145,7 @@ tflite_model = converter.convert()
 (OUTPUT / "plant_disease.tflite").write_bytes(tflite_model)
 (OUTPUT / "labels.json").write_text(json.dumps(class_names, indent=2), encoding="utf-8")
 (OUTPUT / "metrics.json").write_text(
-    json.dumps({"validation_accuracy": float(accuracy), "classes": num_classes, "images": use_count}, indent=2),
+    json.dumps({"validation_accuracy": float(accuracy), "classes": NUM_CLASSES, "images": use_count}, indent=2),
     encoding="utf-8",
 )
 print("Generated", OUTPUT / "plant_disease.tflite")
