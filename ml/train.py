@@ -1,7 +1,8 @@
 """Train AgriSmart's offline plant-disease classifier.
 
-Uses the public Hugging Face PlantVillage release instead of TFDS's
-Mendeley downloader, which can return HTTP 403 on CI runners.
+Uses Hugging Face PlantVillage. The loader is robust to datasets that expose
+only a subset of classes in the first streamed records: it samples the full
+requested budget, builds the label map from all samples, and checks coverage.
 Exports a MobileNetV2 TFLite model for the Flutter app.
 """
 from pathlib import Path
@@ -20,16 +21,18 @@ OUTPUT.mkdir(parents=True, exist_ok=True)
 AUTOTUNE = tf.data.AUTOTUNE
 
 print("Loading PlantVillage from Hugging Face...")
-# Streaming avoids downloading the entire dataset before training starts.
 hf_ds = load_dataset("geraldmc/plantvillage-full", revision="v0.1.0", split="train", streaming=True)
 
-# Collect a deterministic subset first so train/validation splitting is stable.
+# Stream the requested budget. The previous implementation assumed the first
+# 20k records contained every class, which is not guaranteed by dataset order.
 samples = []
-for sample in hf_ds.take(MAX_IMAGES):
+for sample in hf_ds:
     image = sample["image"].convert("RGB")
     label = int(sample["class_idx"])
     class_name = str(sample["class_label"])
     samples.append((np.asarray(image), label, class_name))
+    if len(samples) >= MAX_IMAGES:
+        break
 
 if not samples:
     raise RuntimeError("PlantVillage dataset returned no images")
@@ -38,9 +41,15 @@ class_names_by_id = {}
 for _, label, class_name in samples:
     class_names_by_id[label] = class_name
 
-num_classes = max(class_names_by_id) + 1
-if num_classes != 38:
-    raise RuntimeError(f"Expected 38 PlantVillage classes, found {num_classes}")
+print(f"Observed class IDs: {sorted(class_names_by_id)}")
+missing = sorted(set(range(38)) - set(class_names_by_id))
+if missing:
+    raise RuntimeError(
+        "The streamed subset does not contain all 38 PlantVillage classes. "
+        f"Missing class IDs: {missing}. Increase MAX_IMAGES or use a shuffled/full dataset split."
+    )
+
+num_classes = 38
 class_names = [class_names_by_id[i] for i in range(num_classes)]
 use_count = len(samples)
 print(f"Classes: {num_classes}; using {use_count} images")
@@ -48,12 +57,10 @@ print(f"Classes: {num_classes}; using {use_count} images")
 images = np.stack([x[0] for x in samples])
 labels = np.asarray([x[1] for x in samples], dtype=np.int32)
 
-# Deterministic 90/10 split.
 rng = np.random.default_rng(42)
 indices = rng.permutation(use_count)
 train_count = int(use_count * 0.9)
 train_idx, val_idx = indices[:train_count], indices[train_count:]
-
 train_images, train_labels = images[train_idx], labels[train_idx]
 val_images, val_labels = images[val_idx], labels[val_idx]
 
@@ -81,9 +88,7 @@ val_ds = (val_ds.map(lambda x, y: prepare(x, y), num_parallel_calls=AUTOTUNE)
           .batch(BATCH_SIZE).prefetch(AUTOTUNE))
 
 base = tf.keras.applications.MobileNetV2(
-    input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3),
-    include_top=False,
-    weights="imagenet",
+    input_shape=(IMAGE_SIZE, IMAGE_SIZE, 3), include_top=False, weights="imagenet"
 )
 base.trainable = False
 inputs = tf.keras.Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3))
@@ -98,21 +103,13 @@ callbacks = [
     tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.3, patience=1),
 ]
 
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(1e-3),
-    loss="sparse_categorical_crossentropy",
-    metrics=["accuracy"],
-)
+model.compile(optimizer=tf.keras.optimizers.Adam(1e-3), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
 model.fit(train_ds, validation_data=val_ds, epochs=HEAD_EPOCHS, callbacks=callbacks)
 
 base.trainable = True
 for layer in base.layers[:-30]:
     layer.trainable = False
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(1e-5),
-    loss="sparse_categorical_crossentropy",
-    metrics=["accuracy"],
-)
+model.compile(optimizer=tf.keras.optimizers.Adam(1e-5), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
 model.fit(train_ds, validation_data=val_ds, epochs=FINE_TUNE_EPOCHS, callbacks=callbacks)
 
 _, accuracy = model.evaluate(val_ds, verbose=1)
