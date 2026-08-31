@@ -1,5 +1,6 @@
 tensorflow>=2.16,<2.21
 tensorflow-datasets>=4.9
+importlib-resources>=6.4
 numpy>=1.26
 pillow>=10.0
 scikit-learn>=1.4
