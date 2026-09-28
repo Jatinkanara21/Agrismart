@@ -1,4 +1,5 @@
 import 'package:agrismart/main.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -13,7 +14,11 @@ void main() {
   });
 
   testWidgets('AgriSmart dashboard renders', (tester) async {
-    await tester.pumpWidget(const DashboardPage());
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: DashboardPage(),
+      ),
+    );
     expect(find.text('AgriSmart'), findsOneWidget);
     expect(find.text('Crop Recommendation'), findsOneWidget);
     expect(find.text('Disease Detection'), findsOneWidget);
