@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db import Base, engine
 from app import models
-from app.routers import auth, health, protected
+from app.routers import auth, health, protected, farming
 
 app = FastAPI(title="AgriSmart API", version="1.0.0")
 
@@ -23,6 +23,7 @@ def create_tables():
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(protected.router, prefix="/api/v1")
+app.include_router(farming.router, prefix="/api/v1")
 
 @app.get("/")
 def root():
