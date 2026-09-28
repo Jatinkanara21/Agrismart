@@ -1,0 +1,46 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# PHP / Laravel
+/vendor/
+storage/*.key
+storage/logs/*
+.phpunit.result.cache
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+build/
+*.iml
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ML artifacts
+ml/models/*.h5
+ml/models/*.keras
+ml/models/*.pt
+ml/models/*.pth
+ml/models/*.onnx
+ml/datasets/*
+!ml/datasets/.gitkeep
