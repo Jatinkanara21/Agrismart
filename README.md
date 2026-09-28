@@ -1,26 +1,24 @@
 # 🌱 AgriSmart — AI-Powered Smart Farming Assistant
 
-AgriSmart is a farmer-focused platform combining a Flutter mobile application, Laravel API, MySQL, and Python machine-learning services.
+AgriSmart combines a Flutter mobile application, a Python FastAPI backend, MySQL, and Python machine-learning services.
 
 ## Architecture
 
-Flutter → Laravel API → MySQL / ML service → external AI & weather providers
+Flutter → FastAPI → MySQL / ML service → external AI & weather providers
 
 ## Repository
 
 - `mobile/` — Flutter application
-- `backend/` — Laravel API
+- `backend/` — FastAPI API
 - `ml/` — Python inference/training foundation
 - `docs/` — project documentation
-- `.github/workflows/` — CI
+- `.github/workflows/` — CI and GitHub Pages deployment
 
-## Important integrity rule
+## API
 
-AgriSmart never invents an ML prediction. If a trained model or external service is not configured, the API reports that capability as unavailable.
+The versioned API is exposed under `/api/v1`: authentication, user/dashboard, crop recommendation, plant disease detection, yield prediction, weather, AgriBot, and farming decision workflows.
 
-## Quick start
-
-See [docs/setup.md](docs/setup.md).
+Model/provider endpoints return HTTP 503 when the required production model or provider is not configured. AgriSmart never invents an ML prediction.
 
 ## Documentation
 
