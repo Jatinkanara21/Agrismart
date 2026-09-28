@@ -81,6 +81,10 @@ class AuthTest extends TestCase
 
     public function test_auth_endpoints_allow_the_github_pages_origin(): void
     {
+        config()->set('cors.allowed_origins', [
+            'https://jatinkanara21.github.io',
+        ]);
+
         $this->withHeader('Origin', 'https://jatinkanara21.github.io')
             ->options('/api/v1/auth/login')
             ->assertHeader('Access-Control-Allow-Origin', 'https://jatinkanara21.github.io');
