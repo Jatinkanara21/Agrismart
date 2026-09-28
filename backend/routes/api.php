@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -11,6 +12,28 @@ use App\Http\Controllers\Api\V1\AgriBotController;
 use App\Http\Controllers\Api\V1\FarmingDecisionController;
 
 Route::prefix('v1')->group(function () {
+    Route::get('health', function () {
+        try {
+            DB::connection()->getPdo();
+
+            return response()->json([
+                'success' => true,
+                'service' => 'AgriSmart API',
+                'status' => 'healthy',
+                'database' => 'connected',
+            ]);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return response()->json([
+                'success' => false,
+                'service' => 'AgriSmart API',
+                'status' => 'degraded',
+                'database' => 'unavailable',
+            ], 503);
+        }
+    });
+
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
@@ -18,7 +41,11 @@ Route::prefix('v1')->group(function () {
     });
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::get('user', fn (\Illuminate\Http\Request $request) => response()->json(['success' => true, 'message' => 'User retrieved', 'data' => $request->user()]));
+        Route::get('user', fn (\Illuminate\Http\Request $request) => response()->json([
+            'success' => true,
+            'message' => 'User retrieved',
+            'data' => $request->user(),
+        ]));
         Route::get('dashboard', DashboardController::class);
         Route::post('crops/recommend', [CropRecommendationController::class, 'store']);
         Route::post('disease/detect', [DiseaseDetectionController::class, 'store']);
