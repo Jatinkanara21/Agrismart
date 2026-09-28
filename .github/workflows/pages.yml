@@ -29,14 +29,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Validate production API URL
+      - name: Resolve production API URL
         env:
-          API_URL: ${{ vars.AGRISMART_API_URL }}
+          CONFIGURED_API_URL: ${{ vars.AGRISMART_API_URL }}
         run: |
+          API_URL="$CONFIGURED_API_URL"
           if [ -z "$API_URL" ]; then
-            echo "::error::AGRISMART_API_URL is not configured."
-            echo "Set it in GitHub Settings > Secrets and variables > Actions > Variables."
-            exit 1
+            API_URL="https://agrismart-api-bcbu.onrender.com/api/v1"
+            echo "AGRISMART_API_URL is not set; using the deployed AgriSmart Render API."
           fi
           case "$API_URL" in
             https://*) ;;
@@ -45,8 +45,8 @@ jobs:
               exit 1
               ;;
           esac
+          echo "API_URL=$API_URL" >> "$GITHUB_ENV"
           echo "Production API URL configured."
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -60,8 +60,6 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter web
-        env:
-          API_URL: ${{ vars.AGRISMART_API_URL }}
         run: flutter build web --release --base-href "/Agrismart/" --dart-define=API_BASE_URL="$API_URL"
 
       - name: Configure Pages
