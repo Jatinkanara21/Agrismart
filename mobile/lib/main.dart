@@ -271,12 +271,12 @@ class WeatherCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Card(
         child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              const Icon(Icons.cloud, size: 42, color: AppColors.primary),
-              const SizedBox(width: 12),
-              const Expanded(
+              Icon(Icons.cloud, size: 42, color: AppColors.primary),
+              SizedBox(width: 12),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
