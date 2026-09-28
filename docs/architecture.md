@@ -3,22 +3,23 @@
 ## Layers
 
 ### Mobile
-Flutter presents farmer workflows and calls the versioned backend API. Secrets remain outside the application binary.
+Flutter presents farmer workflows and calls the versioned backend API. Flutter Web receives its production API URL at build time through the `API_BASE_URL` Dart define.
 
 ### Backend
-Laravel owns authentication, validation, authorization, persistence, orchestration, and safe API responses.
+Python FastAPI owns authentication, validation, authorization, persistence, orchestration, and stable API responses. SQLAlchemy provides MySQL persistence and JWT bearer tokens provide authentication.
 
 ### ML
 Python owns preprocessing, model loading, inference, and evaluation. It does not own user authentication or business persistence.
 
-### Database
-MySQL stores users, farmer profiles, prediction history, weather records, conversations, and decision records.
+### Request flow
 
-## Request flow
-
-1. Authenticate with Laravel.
+1. Authenticate with FastAPI.
 2. Submit validated feature input or image.
-3. Laravel authorizes and persists relevant request metadata.
-4. Laravel invokes the configured ML/provider service.
+3. FastAPI authorizes and validates the request.
+4. FastAPI invokes the configured ML/provider service when available.
 5. Only an actual model/provider result is returned as a prediction.
-6. Errors are returned in a stable JSON envelope.
+6. Missing required models/providers return HTTP 503 instead of fabricated data.
+
+### Deployment
+
+GitHub Pages hosts Flutter Web. The FastAPI backend must run on Python-capable HTTPS hosting with MySQL connectivity.
