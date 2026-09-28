@@ -269,7 +269,7 @@ class WeatherCard extends StatelessWidget {
   const WeatherCard({super.key});
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => const Card(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
