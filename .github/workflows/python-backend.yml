@@ -1,0 +1,70 @@
+name: Python Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/python-backend.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/python-backend.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: agrismart-python-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: FastAPI validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements.txt
+
+      - name: Compile Python sources
+        run: python -m compileall -q .
+
+      - name: Import FastAPI application
+        run: python -c "from main import app; print(app.title)"
+
+      - name: Verify API routes
+        run: |
+          python - <<'PY'
+          from main import app
+          paths = {route.path for route in app.routes}
+          required = {
+              "/api/v1/health",
+              "/api/v1/auth/login",
+              "/api/v1/auth/register",
+              "/api/v1/auth/logout",
+              "/api/v1/user",
+              "/api/v1/dashboard",
+              "/api/v1/crops/recommend",
+              "/api/v1/disease/detect",
+              "/api/v1/yield/predict",
+              "/api/v1/weather",
+              "/api/v1/agribot/chat",
+              "/api/v1/farming/decision",
+          }
+          missing = sorted(required - paths)
+          if missing:
+              raise SystemExit(f"Missing API routes: {missing}")
+          print("All required FastAPI routes are registered.")
+          PY
