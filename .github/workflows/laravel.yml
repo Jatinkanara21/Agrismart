@@ -31,4 +31,4 @@ jobs:
       - name: Import FastAPI application
         run: python -c "from main import app; print(app.title)"
       - name: Verify API routes
-        run: python -c "from main import app; paths=sorted(r.path for r in app.routes); assert '/api/v1/health' in paths; assert '/api/v1/auth/login' in paths; assert '/api/v1/auth/register' in paths; print(*paths, sep='\\n')"
+        run: python -c "from main import app; paths=sorted(r.path for r in app.routes); required = {'/api/v1/health', '/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/auth/logout', '/api/v1/user', '/api/v1/dashboard', '/api/v1/crops/recommend', '/api/v1/disease/detect', '/api/v1/yield/predict', '/api/v1/weather', '/api/v1/agribot/chat', '/api/v1/farming/decision'}; missing = sorted(required - set(paths)); assert not missing, f'Missing API routes: {missing}'; print(*paths, sep='\\n')"
