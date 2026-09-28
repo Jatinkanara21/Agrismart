@@ -2,96 +2,65 @@
 
 ## Production architecture
 
-```
+```text
 Flutter Web (GitHub Pages)
         |
         | HTTPS /api/v1
         v
-Laravel 13 API
+Python FastAPI
         |
         +---- MySQL
-        |
         +---- Python ML service
-        |
         +---- Weather / AI providers
 ```
 
-GitHub Pages can host the Flutter Web frontend, but it cannot execute PHP/Laravel or provide MySQL. The Laravel backend therefore needs a PHP-capable hosting service.
+GitHub Pages hosts the Flutter Web frontend. It cannot execute FastAPI or provide MySQL. The FastAPI backend needs Python-capable HTTPS hosting.
 
 ## Backend requirements
 
-- PHP 8.3+
+- Python 3.12+
 - MySQL 8.x
-- Composer 2
 - HTTPS
-- A persistent `APP_KEY`
-- Writable `storage/` and `bootstrap/cache/`
-- Environment variables configured by the hosting provider
-
-The repository includes `backend/Dockerfile` for container-based PHP hosting.
+- Persistent production `JWT_SECRET`
+- Provider environment variables as integrations are enabled
+- `backend/Dockerfile` for container-based Python hosting
 
 ## Required production environment
 
-Set these values in the backend hosting service; never commit production secrets:
-
 ```text
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://YOUR-BACKEND-DOMAIN
-APP_KEY=YOUR_GENERATED_LARAVEL_KEY
-
-DB_CONNECTION=mysql
-DB_HOST=YOUR_DB_HOST
-DB_PORT=3306
-DB_DATABASE=YOUR_DB_NAME
-DB_USERNAME=YOUR_DB_USER
-DB_PASSWORD=YOUR_DB_PASSWORD
-
+APP_NAME=AgriSmart
+DEBUG=false
+DATABASE_URL=mysql+pymysql://USER:PASSWORD@HOST:3306/DATABASE
+JWT_SECRET=YOUR_LONG_RANDOM_SECRET
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=1440
 CORS_ALLOWED_ORIGINS=https://jatinkanara21.github.io
-
-ML_SERVICE_URL=https://YOUR-ML-SERVICE
-ML_SERVICE_TIMEOUT=10
-ML_SERVICE_CONNECT_TIMEOUT=3
-
-WEATHER_API_KEY=...
-AI_API_KEY=...
 ```
 
-Replace the placeholders with values from the actual hosting provider.
+Never deploy with the placeholder JWT secret from `.env.example`.
 
 ## Health check
 
-After deployment, verify:
-
-```text
-GET /api/v1/health
-```
-
-A healthy response reports `status: healthy` and `database: connected`. If the database is unavailable, the endpoint returns HTTP 503.
+Verify `GET /api/v1/health` after deployment. A healthy response reports `status: healthy` and `database: connected`.
 
 ## Flutter Web connection
 
-The GitHub Pages workflow expects the repository Actions variable:
+The GitHub Pages workflow requires:
 
 ```text
-AGRISMART_API_URL=https://YOUR-BACKEND-DOMAIN/api
+AGRISMART_API_URL=https://YOUR-BACKEND-DOMAIN/api/v1
 ```
 
-The Flutter web build uses that value as `API_BASE_URL`. Do not point production at `localhost` or `10.0.2.2`; those addresses are for local development/emulators only.
+The workflow passes this value to Flutter as `API_BASE_URL`. It intentionally fails before deployment if the variable is missing or is not HTTPS. Do not use `localhost` or `10.0.2.2` in production.
 
-## Database migrations
+## Database initialization
 
-The container startup runs `php artisan migrate --force` and `php artisan config:cache`. The hosting environment must provide valid production database credentials before the application starts.
+FastAPI currently creates SQLAlchemy tables at startup with `Base.metadata.create_all`. This is suitable for the current initial schema; a versioned migration system should be added before frequent production schema changes.
 
-## Local development
+## Docker
 
 ```bash
 cd backend
-cp .env.example .env
-composer install
-php artisan key:generate
-php artisan migrate
-php artisan serve
+docker build -t agrismart-api .
+docker run --env-file .env -p 8080:8080 agrismart-api
 ```
-
-Local API health check: `http://127.0.0.1:8000/api/v1/health`
