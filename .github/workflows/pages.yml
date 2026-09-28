@@ -29,6 +29,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Validate production API URL
+        env:
+          API_URL: ${{ vars.AGRISMART_API_URL }}
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "::error::AGRISMART_API_URL is not configured."
+            echo "Set it in GitHub Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+          case "$API_URL" in
+            https://*) ;;
+            *)
+              echo "::error::AGRISMART_API_URL must use HTTPS in production."
+              exit 1
+              ;;
+          esac
+          echo "Production API URL configured."
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -42,7 +60,9 @@ jobs:
         run: flutter pub get
 
       - name: Build Flutter web
-        run: flutter build web --release --base-href "/Agrismart/" --dart-define=API_BASE_URL="${{ vars.AGRISMART_API_URL }}"
+        env:
+          API_URL: ${{ vars.AGRISMART_API_URL }}
+        run: flutter build web --release --base-href "/Agrismart/" --dart-define=API_BASE_URL="$API_URL"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
