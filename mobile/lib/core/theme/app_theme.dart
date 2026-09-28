@@ -9,6 +9,29 @@ class AppColors {
   static const mint = Color(0xFFA5D6A7);
   static const error = Color(0xFFB3261E);
 }
-class AppSpacing { static const xs=4.0, sm=8.0, md=16.0, lg=24.0, xl=32.0; }
-class AppRadius { static const card=18.0, button=12.0; }
-class AppTheme { static ThemeData light() => ThemeData(useMaterial3:true,colorScheme:ColorScheme.fromSeed(seedColor:AppColors.primary),scaffoldBackgroundColor:AppColors.surface,fontFamily:'sans-serif',cardTheme:const CardThemeData(elevation:0,margin:EdgeInsets.zero)); }
+
+class AppSpacing {
+  static const xs = 4.0;
+  static const sm = 8.0;
+  static const md = 16.0;
+  static const lg = 24.0;
+  static const xl = 32.0;
+}
+
+class AppRadius {
+  static const card = 18.0;
+  static const button = 12.0;
+}
+
+class AppTheme {
+  static ThemeData light() => ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+        scaffoldBackgroundColor: AppColors.surface,
+        fontFamily: 'sans-serif',
+        cardTheme: const CardThemeData(
+          elevation: 0,
+          margin: EdgeInsets.zero,
+        ),
+      );
+}
