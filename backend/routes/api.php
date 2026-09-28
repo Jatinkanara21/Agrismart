@@ -1,6 +1,6 @@
 <?php
 
-use IlluminateSupportFacadesRoute;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\CropRecommendationController;
