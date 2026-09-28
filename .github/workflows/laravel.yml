@@ -28,6 +28,7 @@ jobs:
           extensions: mbstring,pdo_mysql,pdo_sqlite
           coverage: none
       - run: composer install --no-interaction --prefer-dist
+      - run: mkdir -p bootstrap/cache && chmod -R u+rwX bootstrap/cache
       - run: cp .env.example .env
       - run: php artisan key:generate
       - run: php artisan migrate --force
