@@ -301,9 +301,11 @@ class WeatherCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Weather'),
                     Text(
-                        'Connect a weather provider to show live conditions.'),
+                      'Live weather',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text('Open Weather to load current conditions and a 5-day forecast.'),
                   ],
                 ),
               ),
