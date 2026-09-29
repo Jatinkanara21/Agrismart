@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'core/theme/app_theme.dart';
-import 'core/network/api_client.dart';
 import 'farming_tools.dart';
 
 void main() => runApp(const AgriSmartApp());
@@ -31,29 +31,25 @@ class _LoginPageState extends State<LoginPage> {
   String? error;
 
   Future<void> login() async {
-    setState(() => loading = true);
-    try {
-      final result = await ApiClient().post('/auth/login', {
-        'email': email.text.trim(),
-        'password': password.text,
-      });
-      final token = (result['data'] as Map?)?['token']?.toString();
-      if (token != null) {
-        await ApiClient().storage.write(key: 'token', value: token);
-      }
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    final storage = const FlutterSecureStorage();
+    final savedEmail = await storage.read(key: 'agrismart_email');
+    final savedPassword = await storage.read(key: 'agrismart_password');
+
+    if (email.text.trim() == savedEmail && password.text == savedPassword) {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const DashboardPage()),
         );
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() => error =
-            'We could not sign you in. Check your details and API connection.');
-      }
-    } finally {
-      if (mounted) setState(() => loading = false);
+    } else if (mounted) {
+      setState(() => error = 'Email or password is incorrect.');
     }
+
+    if (mounted) setState(() => loading = false);
   }
 
   @override
@@ -151,32 +147,37 @@ class _RegisterPageState extends State<RegisterPage> {
   String? message;
 
   Future<void> register() async {
-    setState(() => loading = true);
-    try {
-      final result = await ApiClient().post('/auth/register', {
-        'name': name.text.trim(),
-        'email': email.text.trim(),
-        'password': password.text,
-        'password_confirmation': confirm.text,
-      });
-      final token = (result['data'] as Map?)?['token']?.toString();
-      if (token != null) {
-        await ApiClient().storage.write(key: 'token', value: token);
-      }
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const DashboardPage()),
-          (_) => false,
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => message =
-            'Registration could not be completed. Check the form and server connection.');
-      }
-    } finally {
-      if (mounted) setState(() => loading = false);
+    final userName = name.text.trim();
+    final userEmail = email.text.trim();
+    final userPassword = password.text;
+    final confirmation = confirm.text;
+
+    if (userName.isEmpty || userEmail.isEmpty || userPassword.length < 6) {
+      setState(() => message = 'Enter your name, a valid email, and a password of at least 6 characters.');
+      return;
     }
+    if (userPassword != confirmation) {
+      setState(() => message = 'Passwords do not match.');
+      return;
+    }
+
+    setState(() {
+      loading = true;
+      message = null;
+    });
+
+    final storage = const FlutterSecureStorage();
+    await storage.write(key: 'agrismart_name', value: userName);
+    await storage.write(key: 'agrismart_email', value: userEmail);
+    await storage.write(key: 'agrismart_password', value: userPassword);
+
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DashboardPage()),
+        (_) => false,
+      );
+    }
+    if (mounted) setState(() => loading = false);
   }
 
   @override
