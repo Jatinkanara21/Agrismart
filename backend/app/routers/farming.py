@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from app.core.config import settings
 from app.routers.protected import current_user
-from ml.inference.crop_recommender import CropModelError, recommend_crop
+from app.services.crop_recommender import CropModelError, recommend_crop
 
 router = APIRouter()
 
