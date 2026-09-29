@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/network/api_client.dart';
 import 'core/theme/app_theme.dart';
 import 'data/demo_data.dart';
 
