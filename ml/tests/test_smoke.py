@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from ml.inference.service import ModelUnavailableError, require_model
+from inference.service import ModelUnavailableError, require_model
 
 
 def test_ml_layout_exists():
