@@ -1,0 +1,7 @@
+crop,soil_type,area_hectare,season,rainfall_mm,temperature_c,yield_tons_per_hectare
+Rice,Loamy,1.0,Kharif,1200,27.0,4.2
+Wheat,Loamy,1.0,Rabi,450,21.0,3.1
+Cotton,Black,1.0,Kharif,700,26.0,2.4
+Maize,Loamy,1.0,Kharif,800,25.0,3.8
+Groundnut,Sandy,1.0,Kharif,600,27.0,1.9
+Potato,Loamy,1.0,Rabi,500,19.0,2.8
