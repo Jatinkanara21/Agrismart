@@ -1,205 +1,66 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
-import 'core/network/api_client.dart';
 import 'core/theme/app_theme.dart';
+import 'data/demo_data.dart';
 
-class CropRecommendationPage extends StatefulWidget {
+class CropRecommendationPage extends StatelessWidget {
   const CropRecommendationPage({super.key});
-
-  @override
-  State<CropRecommendationPage> createState() => _CropRecommendationPageState();
-}
-
-class _CropRecommendationPageState extends State<CropRecommendationPage> {
-  final fields = <String, TextEditingController>{
-    'nitrogen': TextEditingController(text: '90'),
-    'phosphorus': TextEditingController(text: '42'),
-    'potassium': TextEditingController(text: '43'),
-    'temperature': TextEditingController(text: '25'),
-    'humidity': TextEditingController(text: '70'),
-    'ph': TextEditingController(text: '6.5'),
-    'rainfall': TextEditingController(text: '200'),
-  };
-  bool loading = false;
-  String? error;
-  Map<String, dynamic>? result;
-
-  Future<void> predict() async {
-    final body = <String, dynamic>{};
-    for (final entry in fields.entries) {
-      final value = double.tryParse(entry.value.text);
-      if (value == null) {
-        setState(() => error = 'Enter valid numeric values for every field.');
-        return;
-      }
-      body[entry.key] = value;
-    }
-    setState(() {
-      loading = true;
-      error = null;
-      result = null;
-    });
-    try {
-      final response = await ApiClient().post('/crops/recommend', body);
-      setState(() => result = response['data'] as Map<String, dynamic>?);
-    } catch (e) {
-      setState(() => error = apiMessage(e));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) => ToolScaffold(
         title: 'Crop Recommendation',
-        subtitle: 'Enter soil and climate measurements for a real model prediction.',
+        subtitle: 'Local demo dataset • no API required',
         child: Column(
           children: [
-            NumericForm(fields: fields),
+            const DemoBanner(),
             const SizedBox(height: 12),
-            ActionButton(label: 'Recommend crop', loading: loading, onPressed: predict),
-            if (error != null) ...[
-              const SizedBox(height: 12),
-              ErrorBox(message: error!),
-            ],
-            if (result != null) ...[
-              const SizedBox(height: 12),
-              ResultCard(
-                title: result!['recommendation'].toString(),
-                subtitle: 'Model confidence: ' + result!['confidence'].toString() + '%',
+            ...demoCrops.map(
+              (crop) => ResultCard(
+                title: crop.name,
+                subtitle: '${crop.confidence}% confidence • ${crop.status}',
                 icon: Icons.grass,
-                extra: 'Alternatives: ' +
-                    (result!['alternatives'] as List).map((item) {
-                      final map = item as Map;
-                      return map['crop'].toString() + ' (' + map['confidence'].toString() + '%)';
-                    }).join(' • '),
+                extra: crop.name == 'Rice'
+                    ? 'Recommended for the demo soil and climate profile.'
+                    : 'Alternative crop in the demo dataset.',
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Decision support only. Validate soil results and local agronomy guidance before planting.',
-                style: TextStyle(fontSize: 12),
-              ),
-            ],
+            ),
+            const SizedBox(height: 8),
+            const Disclaimer(),
           ],
         ),
       );
 }
 
-class WeatherPage extends StatefulWidget {
+class WeatherPage extends StatelessWidget {
   const WeatherPage({super.key});
-
-  @override
-  State<WeatherPage> createState() => _WeatherPageState();
-}
-
-class _WeatherPageState extends State<WeatherPage> {
-  final location = TextEditingController(text: 'Ahmedabad');
-  bool loading = false;
-  String? error;
-  Map<String, dynamic>? data;
-
-  Future<void> loadWeather() async {
-    if (location.text.trim().length < 2) {
-      setState(() => error = 'Enter a city or location.');
-      return;
-    }
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
-      final response = await ApiClient().get(
-        '/weather?location=' + Uri.encodeQueryComponent(location.text.trim()),
-      );
-      setState(() => data = response['data'] as Map<String, dynamic>?);
-    } catch (e) {
-      setState(() => error = apiMessage(e));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) => ToolScaffold(
         title: 'Weather',
-        subtitle: 'Live current conditions and a five-day forecast from Open-Meteo.',
+        subtitle: 'Bundled demo weather • not live conditions',
         child: Column(
           children: [
-            TextField(
-              controller: location,
-              onSubmitted: (_) => loadWeather(),
-              decoration: const InputDecoration(
-                labelText: 'City or location',
-                prefixIcon: Icon(Icons.location_on_outlined),
-              ),
+            const DemoBanner(),
+            const SizedBox(height: 12),
+            ResultCard(
+              title: demoWeather.location,
+              subtitle: '${demoWeather.temperature} °C • ${demoWeather.condition}',
+              icon: Icons.cloud,
+              extra:
+                  'Humidity ${demoWeather.humidity}% • Rain chance ${demoWeather.rainChance}%',
             ),
             const SizedBox(height: 12),
-            ActionButton(label: 'Load weather', loading: loading, onPressed: loadWeather),
-            if (error != null) ...[
-              const SizedBox(height: 12),
-              ErrorBox(message: error!),
-            ],
-            if (data != null) ...[
-              const SizedBox(height: 12),
-              WeatherResult(data: data!),
-            ],
+            const Card(
+              child: ListTile(
+                leading: Icon(Icons.thermostat_outlined),
+                title: Text('Field conditions'),
+                subtitle: Text('Use local observations before making irrigation decisions.'),
+              ),
+            ),
+            const Disclaimer(),
           ],
         ),
       );
-}
-
-class WeatherResult extends StatelessWidget {
-  const WeatherResult({super.key, required this.data});
-
-  final Map<String, dynamic> data;
-
-  @override
-  Widget build(BuildContext context) {
-    final current = (data['current'] as Map?)?.cast<String, dynamic>() ?? {};
-    final daily = (data['daily'] as Map?)?.cast<String, dynamic>() ?? {};
-    final times = List<String>.from(daily['time'] ?? const []);
-    final max = List<dynamic>.from(daily['temperature_2m_max'] ?? const []);
-    final min = List<dynamic>.from(daily['temperature_2m_min'] ?? const []);
-    final rain = List<dynamic>.from(daily['precipitation_sum'] ?? const []);
-
-    return Column(
-      children: [
-        ResultCard(
-          title: data['location'].toString(),
-          subtitle: (current['temperature_2m'] ?? '--').toString() +
-              ' °C • humidity ' +
-              (current['relative_humidity_2m'] ?? '--').toString() +
-              '%',
-          icon: Icons.cloud,
-          extra: 'Feels like ' +
-              (current['apparent_temperature'] ?? '--').toString() +
-              ' °C • rain ' +
-              (current['precipitation'] ?? '--').toString() +
-              ' mm • wind ' +
-              (current['wind_speed_10m'] ?? '--').toString() +
-              ' km/h',
-        ),
-        const SizedBox(height: 10),
-        ...List.generate(
-          times.length,
-          (index) => Card(
-            child: ListTile(
-              leading: const Icon(Icons.calendar_today_outlined),
-              title: Text(times[index]),
-              subtitle: Text(
-                'Min ' + itemAt(min, index) +
-                    ' °C • Max ' + itemAt(max, index) +
-                    ' °C • Rain ' + itemAt(rain, index) + ' mm',
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class DiseaseDetectionPage extends StatefulWidget {
@@ -210,128 +71,102 @@ class DiseaseDetectionPage extends StatefulWidget {
 }
 
 class _DiseaseDetectionPageState extends State<DiseaseDetectionPage> {
-  final picker = ImagePicker();
-  XFile? image;
-  bool loading = false;
-  String? error;
-  Map<String, dynamic>? result;
-
-  Future<void> choose(ImageSource source) async {
-    final selected = await picker.pickImage(source: source, imageQuality: 90);
-    if (selected != null) {
-      setState(() {
-        image = selected;
-        error = null;
-        result = null;
-      });
-    }
-  }
-
-  Future<void> detect() async {
-    if (image == null) {
-      setState(() => error = 'Choose a leaf image first.');
-      return;
-    }
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
-      final bytes = await image!.readAsBytes();
-      final response = await ApiClient().postMultipart(
-        '/disease/detect',
-        'image',
-        bytes,
-        image!.name,
-      );
-      setState(() => result = response['data'] as Map<String, dynamic>?);
-    } catch (e) {
-      setState(() => error = apiMessage(e));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
+  int selected = 0;
 
   @override
-  Widget build(BuildContext context) => ToolScaffold(
-        title: 'Disease Detection',
-        subtitle: 'Upload a leaf image. A diagnosis is returned only when a real vision provider is configured.',
-        child: Column(
-          children: [
-            if (image != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(AppRadius.card),
-                child: FutureBuilder<Uint8List>(
-                  future: image!.readAsBytes(),
-                  builder: (_, snapshot) => snapshot.hasData
-                      ? Image.memory(
-                          snapshot.data!,
-                          height: 220,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        )
-                      : const SizedBox(height: 220),
-                ),
-              )
-            else
-              const EmptyState(
-                icon: Icons.image_outlined,
-                title: 'No image selected',
-                message: 'Use camera or gallery to select a clear leaf photo.',
-              ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => choose(ImageSource.camera),
-                    icon: const Icon(Icons.camera_alt_outlined),
-                    label: const Text('Camera'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => choose(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library_outlined),
-                    label: const Text('Gallery'),
-                  ),
-                ),
-              ],
+  Widget build(BuildContext context) {
+    final disease = demoDiseases[selected];
+
+    return ToolScaffold(
+      title: 'Disease Detection',
+      subtitle: 'Local demo cases • no image API required',
+      child: Column(
+        children: [
+          const DemoBanner(),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            value: selected,
+            decoration: const InputDecoration(
+              labelText: 'Choose demo case',
+              prefixIcon: Icon(Icons.local_florist),
             ),
-            const SizedBox(height: 12),
-            ActionButton(label: 'Detect disease', loading: loading, onPressed: detect),
-            if (error != null) ...[
-              const SizedBox(height: 12),
-              ErrorBox(message: error!),
+            items: [
+              for (var i = 0; i < demoDiseases.length; i++)
+                DropdownMenuItem(
+                  value: i,
+                  child: Text('${demoDiseases[i].crop} • ${demoDiseases[i].disease}'),
+                ),
             ],
-            if (result != null) ...[
-              const SizedBox(height: 12),
-              ResultCard(
-                title: 'Top prediction',
-                subtitle: result!['predictions'].toString(),
-                icon: Icons.health_and_safety_outlined,
-                extra: 'Model: ' + result!['model'].toString(),
-              ),
-            ],
-          ],
-        ),
-      );
+            onChanged: (value) => setState(() => selected = value ?? 0),
+          ),
+          const SizedBox(height: 12),
+          ResultCard(
+            title: disease.disease,
+            subtitle:
+                '${disease.crop} • ${disease.confidence.toStringAsFixed(1)}% confidence',
+            icon: disease.severity == 'High'
+                ? Icons.warning_amber_rounded
+                : Icons.health_and_safety_outlined,
+            extra: 'Severity: ${disease.severity} • ${disease.advice}',
+          ),
+          const SizedBox(height: 8),
+          const Disclaimer(),
+        ],
+      ),
+    );
+  }
 }
 
-class YieldPredictionPage extends StatelessWidget {
+class YieldPredictionPage extends StatefulWidget {
   const YieldPredictionPage({super.key});
 
   @override
-  Widget build(BuildContext context) => const ToolScaffold(
-        title: 'Yield Prediction',
-        subtitle: 'No estimate is displayed until a validated yield dataset and trained model are deployed.',
-        child: EmptyState(
-          icon: Icons.analytics_outlined,
-          title: 'Model not configured',
-          message: 'AgriSmart will not invent a yield number. A validated dataset and trained model are required.',
-        ),
-      );
+  State<YieldPredictionPage> createState() => _YieldPredictionPageState();
+}
+
+class _YieldPredictionPageState extends State<YieldPredictionPage> {
+  int selected = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final item = demoYields[selected];
+
+    return ToolScaffold(
+      title: 'Yield Prediction',
+      subtitle: 'Bundled sample dataset • illustrative estimate',
+      child: Column(
+        children: [
+          const DemoBanner(),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            value: selected,
+            decoration: const InputDecoration(
+              labelText: 'Crop scenario',
+              prefixIcon: Icon(Icons.analytics_outlined),
+            ),
+            items: [
+              for (var i = 0; i < demoYields.length; i++)
+                DropdownMenuItem(
+                  value: i,
+                  child: Text(demoYields[i].crop),
+                ),
+            ],
+            onChanged: (value) => setState(() => selected = value ?? 0),
+          ),
+          const SizedBox(height: 12),
+          ResultCard(
+            title: '${item.yieldPerHectare.toStringAsFixed(1)} tons/hectare',
+            subtitle: '${item.crop} • ${item.season} • ${item.soil} soil',
+            icon: Icons.trending_up,
+            extra:
+                'Rainfall ${item.rainfall} mm • Temperature ${item.temperature.toStringAsFixed(0)} °C',
+          ),
+          const SizedBox(height: 8),
+          const Disclaimer(),
+        ],
+      ),
+    );
+  }
 }
 
 class AgriBotPage extends StatefulWidget {
@@ -343,181 +178,108 @@ class AgriBotPage extends StatefulWidget {
 
 class _AgriBotPageState extends State<AgriBotPage> {
   final controller = TextEditingController();
-  bool loading = false;
   final messages = <String>[];
 
-  Future<void> send() async {
-    final text = controller.text.trim();
-    if (text.isEmpty || loading) return;
+  void send() {
+    final question = controller.text.trim();
+    if (question.isEmpty) return;
     setState(() {
-      messages.add('You: ' + text);
+      messages.add('You: $question');
+      messages.add('AgriBot Demo: ${demoBotReply(question)}');
       controller.clear();
-      loading = true;
     });
-    try {
-      final response = await ApiClient().post('/agribot/chat', {'message': text});
-      final data = response['data'] as Map<String, dynamic>;
-      setState(() => messages.add('AgriBot: ' + data['answer'].toString()));
-    } catch (e) {
-      setState(() => messages.add('AgriBot unavailable: ' + apiMessage(e)));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
   }
 
   @override
   Widget build(BuildContext context) => ToolScaffold(
         title: 'AgriBot',
-        subtitle: 'AI agricultural assistant. No fake fallback answers are generated.',
+        subtitle: 'Local rule-based demo assistant • no API required',
         child: Column(
           children: [
+            const DemoBanner(),
+            const SizedBox(height: 12),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
+                color: AppColors.card,
                 borderRadius: BorderRadius.circular(AppRadius.card),
-                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               child: messages.isEmpty
                   ? const EmptyState(
                       icon: Icons.smart_toy_outlined,
-                      title: 'Ask AgriBot',
-                      message: 'Try a question about soil, irrigation, crops, or farming practices.',
+                      title: 'Ask Demo AgriBot',
+                      message: 'Try: “How should I manage water?” or “Which crop is recommended?”',
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: messages.map((m) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Text(m),
-                          )).toList(),
+                      children: messages
+                          .map(
+                            (message) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              child: Text(message),
+                            ),
+                          )
+                          .toList(),
                     ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
-              minLines: 1,
-              maxLines: 4,
-              decoration: InputDecoration(
+              maxLines: 3,
+              decoration: const InputDecoration(
                 labelText: 'Ask a farming question',
-                suffixIcon: IconButton(
-                  onPressed: loading ? null : send,
-                  icon: const Icon(Icons.send),
-                ),
+                suffixIcon: Icon(Icons.send),
               ),
               onSubmitted: (_) => send(),
+            ),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: send,
+              icon: const Icon(Icons.send),
+              label: const Text('Ask AgriBot'),
             ),
           ],
         ),
       );
 }
 
-class FarmDecisionPage extends StatefulWidget {
+class FarmDecisionPage extends StatelessWidget {
   const FarmDecisionPage({super.key});
-
-  @override
-  State<FarmDecisionPage> createState() => _FarmDecisionPageState();
-}
-
-class _FarmDecisionPageState extends State<FarmDecisionPage> {
-  final location = TextEditingController(text: 'Ahmedabad');
-  final fields = <String, TextEditingController>{
-    'nitrogen': TextEditingController(text: '90'),
-    'phosphorus': TextEditingController(text: '42'),
-    'potassium': TextEditingController(text: '43'),
-    'temperature': TextEditingController(text: '25'),
-    'humidity': TextEditingController(text: '70'),
-    'ph': TextEditingController(text: '6.5'),
-    'rainfall': TextEditingController(text: '200'),
-  };
-  bool loading = false;
-  String? error;
-  Map<String, dynamic>? result;
-
-  Future<void> decide() async {
-    final body = <String, dynamic>{'location': location.text.trim()};
-    for (final entry in fields.entries) {
-      final value = double.tryParse(entry.value.text);
-      if (value == null) {
-        setState(() => error = 'Enter valid numeric values for every field.');
-        return;
-      }
-      body[entry.key] = value;
-    }
-    setState(() {
-      loading = true;
-      error = null;
-      result = null;
-    });
-    try {
-      final response = await ApiClient().post('/farming/decision', body);
-      setState(() => result = response['data'] as Map<String, dynamic>?);
-    } catch (e) {
-      setState(() => error = apiMessage(e));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) => ToolScaffold(
         title: 'Farm Decisions',
-        subtitle: 'Combines the crop model with transparent decision-support actions.',
+        subtitle: 'Local demo decision support • transparent sample data',
         child: Column(
           children: [
-            TextField(
-              controller: location,
-              decoration: const InputDecoration(
-                labelText: 'Farm location',
-                prefixIcon: Icon(Icons.location_on_outlined),
-              ),
+            const DemoBanner(),
+            const SizedBox(height: 12),
+            ResultCard(
+              title: 'Rice',
+              subtitle: '94% demo match • Ahmedabad profile',
+              icon: Icons.agriculture,
+              extra: 'Use soil moisture, rainfall, and crop-stage observations before acting.',
             ),
-            const SizedBox(height: 12),
-            NumericForm(fields: fields),
-            const SizedBox(height: 12),
-            ActionButton(label: 'Generate decision support', loading: loading, onPressed: decide),
-            if (error != null) ...[
-              const SizedBox(height: 12),
-              ErrorBox(message: error!),
-            ],
-            if (result != null) ...[
-              const SizedBox(height: 12),
-              ResultCard(
-                title: result!['recommended_crop'].toString(),
-                subtitle: 'Model confidence: ' + result!['confidence'].toString() + '%',
-                icon: Icons.agriculture,
-                extra: 'Alternatives: ' + result!['alternatives'].toString(),
-              ),
-              const SizedBox(height: 8),
-              ...(result!['actions'] as List).map(
-                (item) => ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.check_circle_outline),
-                  title: Text(item.toString()),
-                ),
-              ),
-            ],
+            const SizedBox(height: 8),
+            const ActionTile(
+              icon: Icons.water_drop_outlined,
+              title: 'Irrigation',
+              text: 'Check soil moisture before watering.',
+            ),
+            const ActionTile(
+              icon: Icons.science_outlined,
+              title: 'Soil',
+              text: 'Use recent soil-test results before fertilizer decisions.',
+            ),
+            const ActionTile(
+              icon: Icons.search_outlined,
+              title: 'Scouting',
+              text: 'Inspect representative field areas weekly for disease symptoms.',
+            ),
+            const Disclaimer(),
           ],
         ),
-      );
-}
-
-class NumericForm extends StatelessWidget {
-  const NumericForm({super.key, required this.fields});
-
-  final Map<String, TextEditingController> fields;
-
-  @override
-  Widget build(BuildContext context) => Column(
-        children: fields.entries.map((entry) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: TextField(
-              controller: entry.value,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: fieldLabel(entry.key)),
-            ),
-          );
-        }).toList(),
       );
 }
 
@@ -547,30 +309,50 @@ class ToolScaffold extends StatelessWidget {
       );
 }
 
-class ActionButton extends StatelessWidget {
-  const ActionButton({
-    super.key,
-    required this.label,
-    required this.loading,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool loading;
-  final VoidCallback onPressed;
+class DemoBanner extends StatelessWidget {
+  const DemoBanner({super.key});
 
   @override
-  Widget build(BuildContext context) => SizedBox(
+  Widget build(BuildContext context) => Container(
         width: double.infinity,
-        child: FilledButton(
-          onPressed: loading ? null : onPressed,
-          child: loading
-              ? const SizedBox(
-                  height: 20,
-                  width: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(label),
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.mint,
+          borderRadius: BorderRadius.circular(AppRadius.card),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.offline_bolt, color: AppColors.primary),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'DEMO MODE • Data is bundled with AgriSmart and works without an API.',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class ActionTile extends StatelessWidget {
+  const ActionTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.text,
+  });
+
+  final IconData icon;
+  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: ListTile(
+          leading: Icon(icon, color: AppColors.primary),
+          title: Text(title),
+          subtitle: Text(text),
         ),
       );
 }
@@ -633,13 +415,17 @@ class EmptyState extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppRadius.card),
-          border: Border.all(color: Theme.of(context).dividerColor),
+          border: Border.all(color: Colors.black12),
         ),
         child: Column(
           children: [
             Icon(icon, size: 54, color: AppColors.primary),
             const SizedBox(height: 12),
-            Text(title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 8),
             Text(message, textAlign: TextAlign.center),
           ],
@@ -647,48 +433,16 @@ class EmptyState extends StatelessWidget {
       );
 }
 
-
-class ErrorBox extends StatelessWidget {
-  const ErrorBox({super.key, required this.message});
-
-  final String message;
+class Disclaimer extends StatelessWidget {
+  const Disclaimer({super.key});
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.errorContainer,
-          borderRadius: BorderRadius.circular(12),
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Demo/decision-support data only. Validate important farming decisions with current field measurements and local agronomy guidance.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12),
         ),
-        child: Text(message),
       );
-}
-
-String apiMessage(Object error) {
-  if (error is ApiException) {
-    if (error.statusCode == 503) {
-      return 'Service not configured: ' + error.message;
-    }
-    return error.message;
-  }
-  return 'Request failed. Check the API connection.';
-}
-
-String fieldLabel(String key) {
-  const labels = {
-    'nitrogen': 'Nitrogen (N)',
-    'phosphorus': 'Phosphorus (P)',
-    'potassium': 'Potassium (K)',
-    'temperature': 'Temperature (°C)',
-    'humidity': 'Humidity (%)',
-    'ph': 'Soil pH',
-    'rainfall': 'Rainfall (mm)',
-  };
-  return labels[key] ?? key;
-}
-
-String itemAt(List<dynamic> values, int index) {
-  if (index < 0 || index >= values.length) return '--';
-  return values[index].toString();
 }
