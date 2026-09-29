@@ -1,0 +1,7 @@
+crop,disease,severity,confidence,advice
+Tomato,Healthy,low,98.2,Maintain balanced irrigation and inspect leaves weekly
+Tomato,Early Blight,medium,91.4,Remove affected leaves and improve airflow
+Potato,Late Blight,high,94.1,Isolate affected plants and seek local agronomy guidance
+Rice,Bacterial Leaf Blight,medium,89.7,Avoid excessive nitrogen and manage field water
+Wheat,Healthy,low,97.5,Continue monitoring and maintain field hygiene
+Cotton,Bacterial Blight,medium,88.9,Remove heavily affected foliage and monitor spread
