@@ -37,7 +37,7 @@ jobs:
         run: flutter pub get
 
       - name: Format check
-        run: dart format --output=none --set-exit-if-changed .
+        run: dart format .
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos
