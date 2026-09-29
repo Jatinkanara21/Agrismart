@@ -1,4 +1,3 @@
-import base64
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
