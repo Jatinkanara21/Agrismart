@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'farming_tools.dart';
+import 'data/demo_data.dart';
 
 void main() => runApp(const AgriSmartApp());
 
@@ -291,24 +292,40 @@ class WeatherCard extends StatelessWidget {
   const WeatherCard({super.key});
 
   @override
-  Widget build(BuildContext context) => const Card(
+  Widget build(BuildContext context) => Card(
         child: Padding(
-          padding: EdgeInsets.all(AppSpacing.md),
-          child: Row(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.cloud, size: 42, color: AppColors.primary),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Live weather',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    Text('Open Weather to load current conditions and a 5-day forecast.'),
-                  ],
-                ),
+              const Row(
+                children: [
+                  Icon(Icons.cloud, size: 36, color: AppColors.primary),
+                  SizedBox(width: 10),
+                  Text(
+                    'Demo Weather',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                demoWeather.location,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${demoWeather.temperature} °C • ${demoWeather.condition}',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Humidity ${demoWeather.humidity}% • Rain chance ${demoWeather.rainChance}%',
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Bundled demo data • not live weather',
+                style: TextStyle(fontSize: 12),
               ),
             ],
           ),
