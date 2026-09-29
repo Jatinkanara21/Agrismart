@@ -1,8 +1,8 @@
-import os
-
 from fastapi import APIRouter, HTTPException
 from openai import OpenAI
 from pydantic import BaseModel, Field
+
+from app.core.config import settings
 
 router = APIRouter(prefix="/agribot", tags=["agribot"])
 
@@ -17,19 +17,18 @@ class ChatResponse(BaseModel):
 
 
 def _client() -> OpenAI:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    if not settings.openai_api_key:
         raise HTTPException(
             status_code=503,
             detail="AgriBot AI is not configured on the backend.",
         )
-    return OpenAI(api_key=api_key)
+    return OpenAI(api_key=settings.openai_api_key)
 
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest) -> ChatResponse:
     client = _client()
-    model = os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
+    model = settings.openai_model
 
     system_prompt = (
         "You are AgriBot, an agricultural decision-support assistant. "
@@ -48,7 +47,6 @@ def chat(payload: ChatRequest) -> ChatResponse:
         )
         reply = (response.output_text or "").strip()
     except Exception as exc:
-        # Do not expose provider credentials or internal exception details.
         raise HTTPException(
             status_code=502,
             detail="The AgriBot provider request failed.",
