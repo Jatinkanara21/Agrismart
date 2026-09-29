@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 1440
     cors_allowed_origins: str = "http://localhost:3000,http://localhost:8080"
+    hf_token: str = ""
+    hf_disease_model: str = "prof-freakenstein/plantnet-disease-detection"
+    hf_chat_model: str = ""
+    open_meteo_base_url: str = "https://api.open-meteo.com"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
