@@ -1,4 +1,4 @@
-from ml.inference.crop_recommender import recommend_crop
+from inference.crop_recommender import recommend_crop
 
 
 def test_crop_recommendation_returns_ranked_result():
