@@ -44,3 +44,8 @@ ml/models/*.pth
 ml/models/*.onnx
 ml/datasets/*
 !ml/datasets/.gitkeep
+
+# Local SQLite databases
+*.db
+*.sqlite
+*.sqlite3
