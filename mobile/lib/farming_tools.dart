@@ -178,25 +178,88 @@ class AgriBotPage extends StatefulWidget {
 
 class _AgriBotPageState extends State<AgriBotPage> {
   final controller = TextEditingController();
+  final api = ApiClient();
   final messages = <String>[];
+  bool loading = false;
 
-  void send() {
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> send() async {
     final question = controller.text.trim();
-    if (question.isEmpty) return;
+    if (question.isEmpty || loading) return;
+
     setState(() {
-      messages.add('You: $question');
-      messages.add('AgriBot Demo: ${demoBotReply(question)}');
+      messages.add('You: ' + question);
+      loading = true;
       controller.clear();
     });
+
+    try {
+      final data = await api.post('/agribot/chat', {'message': question});
+      final reply = data['reply']?.toString().trim();
+      if (reply == null || reply.isEmpty) {
+        throw const ApiException('AgriBot returned an empty response.', 502);
+      }
+      if (!mounted) return;
+      setState(() {
+        messages.add('AgriBot AI: ' + reply);
+        loading = false;
+      });
+    } on ApiException catch (error) {
+      if (!mounted) return;
+      setState(() {
+        messages.add(
+          'AgriBot: AI service is unavailable (' +
+              error.statusCode.toString() +
+              '). Demo answer: ' +
+              demoBotReply(question),
+        );
+        loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        messages.add(
+          'AgriBot: AI service could not be reached. Demo answer: ' +
+              demoBotReply(question),
+        );
+        loading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) => ToolScaffold(
         title: 'AgriBot',
-        subtitle: 'Local rule-based demo assistant • no API required',
+        subtitle: 'AI farming assistant • secure backend connection',
         child: Column(
           children: [
-            const DemoBanner(),
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.mint,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.smart_toy_outlined, color: AppColors.primary),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'AI requests go through the AgriSmart backend. '
+                      'The OpenAI API key is never stored in the app.',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -208,8 +271,9 @@ class _AgriBotPageState extends State<AgriBotPage> {
               child: messages.isEmpty
                   ? const EmptyState(
                       icon: Icons.smart_toy_outlined,
-                      title: 'Ask Demo AgriBot',
-                      message: 'Try: “How should I manage water?” or “Which crop is recommended?”',
+                      title: 'Ask AgriBot AI',
+                      message:
+                          'Try: “How should I manage water?” or “What should I check for crop disease?”',
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,18 +291,29 @@ class _AgriBotPageState extends State<AgriBotPage> {
             TextField(
               controller: controller,
               maxLines: 3,
-              decoration: const InputDecoration(
+              enabled: !loading,
+              decoration: InputDecoration(
                 labelText: 'Ask a farming question',
-                suffixIcon: Icon(Icons.send),
+                suffixIcon: loading
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : const Icon(Icons.send),
               ),
               onSubmitted: (_) => send(),
             ),
             const SizedBox(height: 8),
             FilledButton.icon(
-              onPressed: send,
+              onPressed: loading ? null : send,
               icon: const Icon(Icons.send),
-              label: const Text('Ask AgriBot'),
+              label: Text(loading ? 'Thinking...' : 'Ask AgriBot'),
             ),
+            const Disclaimer(),
           ],
         ),
       );
