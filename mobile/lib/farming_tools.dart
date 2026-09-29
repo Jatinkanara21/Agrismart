@@ -647,6 +647,24 @@ class EmptyState extends StatelessWidget {
       );
 }
 
+
+class ErrorBox extends StatelessWidget {
+  const ErrorBox({super.key, required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(message),
+      );
+}
+
 String apiMessage(Object error) {
   if (error is ApiException) {
     if (error.statusCode == 503) {
