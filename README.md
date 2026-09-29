@@ -134,6 +134,10 @@ The versioned API is exposed under `/api/v1`.
 
 Prediction/provider endpoints return HTTP 503 until their real model or provider is configured. The application does not fabricate predictions.
 
+## Bundled Demo Data
+
+The repository now includes transparent local demo datasets for disease detection, yield prediction, and farming guidance under `backend/data/`. Flutter also includes a small local demo-data layer so the UI can be explored without provider credentials. Demo values are labeled as demonstration/decision-support data and are not presented as live agronomic measurements.
+
 ## Testing
 
 The GitHub Actions pipelines currently verify:
