@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
 import 'core/network/api_client.dart';
+import 'farming_tools.dart';
 
 void main() => runApp(const AgriSmartApp());
 
@@ -248,15 +249,35 @@ class DashboardPage extends StatelessWidget {
                 mainAxisSpacing: 12,
                 children: const [
                   FeatureCard(
-                      icon: Icons.grass, title: 'Crop Recommendation'),
+                    icon: Icons.grass,
+                    title: 'Crop Recommendation',
+                    page: CropRecommendationPage(),
+                  ),
                   FeatureCard(
-                      icon: Icons.local_florist, title: 'Disease Detection'),
+                    icon: Icons.local_florist,
+                    title: 'Disease Detection',
+                    page: DiseaseDetectionPage(),
+                  ),
                   FeatureCard(
-                      icon: Icons.analytics, title: 'Yield Prediction'),
-                  FeatureCard(icon: Icons.smart_toy, title: 'AgriBot'),
-                  FeatureCard(icon: Icons.cloud, title: 'Weather'),
+                    icon: Icons.analytics,
+                    title: 'Yield Prediction',
+                    page: YieldPredictionPage(),
+                  ),
                   FeatureCard(
-                      icon: Icons.agriculture, title: 'Farm Decisions'),
+                    icon: Icons.smart_toy,
+                    title: 'AgriBot',
+                    page: AgriBotPage(),
+                  ),
+                  FeatureCard(
+                    icon: Icons.cloud,
+                    title: 'Weather',
+                    page: WeatherPage(),
+                  ),
+                  FeatureCard(
+                    icon: Icons.agriculture,
+                    title: 'Farm Decisions',
+                    page: FarmDecisionPage(),
+                  ),
                 ],
               ),
             ],
@@ -293,17 +314,23 @@ class WeatherCard extends StatelessWidget {
 }
 
 class FeatureCard extends StatelessWidget {
-  const FeatureCard({super.key, required this.icon, required this.title});
+  const FeatureCard({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.page,
+  });
 
   final IconData icon;
   final String title;
+  final Widget page;
 
   @override
   Widget build(BuildContext context) => Card(
         child: InkWell(
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => FeaturePage(title: title)),
+            MaterialPageRoute(builder: (_) => page),
           ),
           borderRadius: BorderRadius.circular(AppRadius.card),
           child: Padding(
