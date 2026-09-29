@@ -21,7 +21,7 @@ FEATURES = (
 )
 
 DATASET_PATH = (
-    Path(__file__).resolve().parents[2] / "data" / "crop_recommendation.csv"
+    Path(__file__).resolve().parents[1] / "data" / "crop_recommendation.csv"
 )
 
 
