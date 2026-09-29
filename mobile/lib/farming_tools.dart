@@ -645,6 +645,7 @@ class EmptyState extends StatelessWidget {
           ],
         ),
       );
+}
 
 String apiMessage(Object error) {
   if (error is ApiException) {
