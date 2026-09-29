@@ -45,17 +45,19 @@ Verify `GET /api/v1/health` after deployment. A healthy response reports `status
 
 ## Flutter Web connection
 
-The GitHub Pages workflow requires:
+The GitHub Pages workflow accepts:
 
 ```text
 AGRISMART_API_URL=https://YOUR-BACKEND-DOMAIN/api/v1
 ```
 
-The workflow passes this value to Flutter as `API_BASE_URL`. It intentionally fails before deployment if the variable is missing or is not HTTPS. Do not use `localhost` or `10.0.2.2` in production.
+The workflow passes this value to Flutter as `API_BASE_URL`. If the repository variable is not configured, the current deployment workflow falls back to the verified Render API host used by this repository. Do not use `localhost` or `10.0.2.2` in production.
 
 ## Database initialization
 
 FastAPI currently creates SQLAlchemy tables at startup with `Base.metadata.create_all`. This is suitable for the current initial schema; a versioned migration system should be added before frequent production schema changes.
+
+The current Render deployment uses the application's SQLite fallback because a persistent MySQL connection has not been configured there. SQLite on an ephemeral Render web service is not a durable production database. Configure a persistent MySQL service and set `DATABASE_URL` before treating the deployment as production-ready.
 
 ## Docker
 
