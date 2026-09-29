@@ -53,6 +53,21 @@ class ApiClient {
     return _decode(response);
   }
 
+  Future<Map<String, dynamic>> postMultipart(String path, String field, List<int> bytes, String filename) async {
+    final token = await storage.read(key: 'token');
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$_resolvedBaseUrl$path'),
+    );
+    request.headers['Accept'] = 'application/json';
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
+    request.files.add(
+      http.MultipartFile.fromBytes(field, bytes, filename: filename),
+    );
+    final response = await http.Response.fromStream(await request.send());
+    return _decode(response);
+  }
+
   Map<String, dynamic> _decode(http.Response response) {
     Map<String, dynamic> data;
     try {
@@ -69,7 +84,7 @@ class ApiClient {
 
     if (response.statusCode >= 400) {
       throw ApiException(
-        data['message']?.toString() ?? 'Request failed',
+        data['message']?.toString() ?? data['detail']?.toString() ?? 'Request failed',
         response.statusCode,
       );
     }
