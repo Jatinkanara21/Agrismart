@@ -254,7 +254,7 @@ class _AgriBotPageState extends State<AgriBotPage> {
                   Expanded(
                     child: Text(
                       'AI requests go through the AgriSmart backend. '
-                      'The OpenAI API key is never stored in the app.',
+                      'The Ollama Cloud API key is never stored in the app.',
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
