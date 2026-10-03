@@ -13,8 +13,8 @@ class Settings(BaseSettings):
     hf_disease_model: str = "prof-freakenstein/plantnet-disease-detection"
     hf_chat_model: str = ""
     open_meteo_base_url: str = "https://api.open-meteo.com"
-    openai_api_key: str = ""
-    openai_model: str = "gpt-5.6-luna"
+    openrouter_api_key: str = ""
+    openrouter_model: str = "openai/gpt-4o-mini"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
