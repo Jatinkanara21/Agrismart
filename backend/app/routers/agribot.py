@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from openai import OpenAI
 from pydantic import BaseModel, Field
+import httpx
 
 from app.core.config import settings
 
@@ -16,27 +16,13 @@ class ChatResponse(BaseModel):
     model: str
 
 
-def _client() -> OpenAI:
-    if not settings.openrouter_api_key:
+@router.post("/chat", response_model=ChatResponse)
+def chat(payload: ChatRequest) -> ChatResponse:
+    if not settings.ollama_api_key:
         raise HTTPException(
             status_code=503,
             detail="AgriBot AI is not configured on the backend.",
         )
-
-    return OpenAI(
-        api_key=settings.openrouter_api_key,
-        base_url="https://openrouter.ai/api/v1",
-        default_headers={
-            "HTTP-Referer": "https://jatinkanara21.github.io",
-            "X-Title": "AgriSmart",
-        },
-    )
-
-
-@router.post("/chat", response_model=ChatResponse)
-def chat(payload: ChatRequest) -> ChatResponse:
-    client = _client()
-    model = settings.openrouter_model
 
     system_prompt = (
         "You are AgriBot, an agricultural decision-support assistant. "
@@ -47,26 +33,36 @@ def chat(payload: ChatRequest) -> ChatResponse:
     )
 
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": payload.message},
-            ],
-            max_tokens=500,
-            temperature=0.3,
+        response = httpx.post(
+            f"{settings.ollama_base_url.rstrip('/')}/chat",
+            headers={
+                "Authorization": f"Bearer {settings.ollama_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": settings.ollama_model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": payload.message},
+                ],
+                "stream": False,
+            },
+            timeout=60.0,
         )
-        reply = (response.choices[0].message.content or "").strip()
-    except Exception as exc:
+        response.raise_for_status()
+        data = response.json()
+        message = data.get("message") or {}
+        reply = (message.get("content") or "").strip()
+    except (httpx.HTTPError, ValueError) as exc:
         raise HTTPException(
             status_code=502,
-            detail="The AgriBot provider request failed.",
+            detail="The Ollama Cloud provider request failed.",
         ) from exc
 
     if not reply:
         raise HTTPException(
             status_code=502,
-            detail="The AgriBot provider returned an empty response.",
+            detail="Ollama Cloud returned an empty response.",
         )
 
-    return ChatResponse(reply=reply, model=model)
+    return ChatResponse(reply=reply, model=settings.ollama_model)
