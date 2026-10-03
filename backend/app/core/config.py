@@ -13,8 +13,9 @@ class Settings(BaseSettings):
     hf_disease_model: str = "prof-freakenstein/plantnet-disease-detection"
     hf_chat_model: str = ""
     open_meteo_base_url: str = "https://api.open-meteo.com"
-    openrouter_api_key: str = ""
-    openrouter_model: str = "openai/gpt-4o-mini"
+    ollama_api_key: str = ""
+    ollama_model: str = "gemma4:31b"
+    ollama_base_url: str = "https://ollama.com/api"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
