@@ -17,18 +17,26 @@ class ChatResponse(BaseModel):
 
 
 def _client() -> OpenAI:
-    if not settings.openai_api_key:
+    if not settings.openrouter_api_key:
         raise HTTPException(
             status_code=503,
             detail="AgriBot AI is not configured on the backend.",
         )
-    return OpenAI(api_key=settings.openai_api_key)
+
+    return OpenAI(
+        api_key=settings.openrouter_api_key,
+        base_url="https://openrouter.ai/api/v1",
+        default_headers={
+            "HTTP-Referer": "https://jatinkanara21.github.io",
+            "X-Title": "AgriSmart",
+        },
+    )
 
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest) -> ChatResponse:
     client = _client()
-    model = settings.openai_model
+    model = settings.openrouter_model
 
     system_prompt = (
         "You are AgriBot, an agricultural decision-support assistant. "
@@ -39,13 +47,16 @@ def chat(payload: ChatRequest) -> ChatResponse:
     )
 
     try:
-        response = client.responses.create(
+        response = client.chat.completions.create(
             model=model,
-            instructions=system_prompt,
-            input=payload.message,
-            max_output_tokens=500,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": payload.message},
+            ],
+            max_tokens=500,
+            temperature=0.3,
         )
-        reply = (response.output_text or "").strip()
+        reply = (response.choices[0].message.content or "").strip()
     except Exception as exc:
         raise HTTPException(
             status_code=502,
